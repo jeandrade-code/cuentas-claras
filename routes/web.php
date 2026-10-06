@@ -47,3 +47,4 @@ Route::middleware([UsuarioMaqueta::class /* FASE 2: 'auth', 'cuenta.activa' */])
         require __DIR__.'/modulos/admin.php';            // Juan (J7)
     });
 });
+

@@ -1,79 +1,79 @@
-{{--
-  ==============================================================================
-  ARCHIVO : resources/views/app/gastos/index.blade.php
-  QUÉ ES  : Estructura Blade de la pantalla "Gastos y transacciones" (SIN diseño original todavía:
-            el contenido es una plantilla con zonas dinámicas).
-  RUTA    : GET /gastos y /gastos/nuevo (gastos.index, gastos.create) · POST gastos.store · PUT
-            gastos.update · DELETE gastos.destroy · Controlador: GastoController
-  DATOS QUE LLEGAN DEL CONTROLADOR:
-    - $gastos (paginado, ya filtrado)
-    - $categorias (propias + globales)
-    - filtros en la URL: categoria, mes, desde, hasta (combinables)
-  BASE DE DATOS: gastos, categorias_gasto
-  QUÉ HAY QUE HACER (en orden):
-    1. Crear la ruta con el NOMBRE indicado en routes/web.php, dentro del grupo con los middleware
-       de la sección RUTA.
-    2. Crear el controlador y devolver esta vista con las variables listadas en DATOS (compact o
-       arreglo).
-    3. Consultar SIEMPRE por el usuario autenticado (auth()->user()->relación()); nunca
-       Modelo::all().
-    4. Reemplazar el bloque "DISEÑO PENDIENTE" por el code.html original de esta pantalla,
-       conservando los @forelse/@empty.
-    5. Formularios: @csrf, @method cuando no sea POST, name= igual al de la validación
-       (FormRequest) y @error bajo cada campo.
-    6. Mensajes de éxito: redirect()->with('exito', 'texto de la especificación') (se muestran en
-       <x-toast />).
-    7. Validar: monto > 0, categoría válida, fecha no futura. Mensajes: "Gasto
-       guardado/actualizado/eliminado".
-    8. Eliminar con modal de confirmación; el gasto de otro usuario debe responder 403 (Policy).
-    9. Estado vacío: "No hay gastos registrados en este periodo".
-  CÓMO HACERLO / NOTAS:
-    - Los textos de "estado vacío" ya son los de la especificación.
-    - El CSS exclusivo de esta pantalla va en public/css/gastos.css.
-  CÓMO SE COMPRUEBA:
-    - Entrar con un usuario sin datos: se ve el texto de estado vacío.
-    - Entrar con dos usuarios: ninguno ve datos del otro.
-    - Probar en 1440, 768 y 390 px sin scroll horizontal.
-  ==============================================================================
---}}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Gastos - Cuentas Claras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Mis Gastos</h1>
 
-@extends('layouts.app')
-@section('titulo', 'Gastos y transacciones · Cuentas Claras')
-@push('styles')
-  <link rel="stylesheet" href="{{ asset('css/gastos.css') }}">
-@endpush
-@section('content')
-  <main class="relative pt-16 w-full px-margin min-h-screen bg-surface">
-    <div class="w-full max-w-7xl mx-auto py-space-lg flex flex-col gap-space-lg">
-      {{-- DISEÑO PENDIENTE: reemplazar por el code.html original de esta pantalla --}}
-      <header>
-        <h1 class="font-headline-xl text-headline-xl text-on-surface">Gastos y transacciones</h1>
-        <p class="font-body-md text-body-md text-on-surface-variant mt-1">Registra y consulta tus gastos</p>
-      </header>
-      <section class="card p-space-lg" data-dinamico="categorias">
-        <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
-          Registrar gasto (monto, categoría, fecha, descripción)
-        </h2>
-        {{-- DINÁMICO: categorias --}}
-        @forelse(($categorias ?? []) as $item)
-          {{-- Aquí va el diseño de un elemento --}}
-        @empty
-          <p class="font-body-md text-body-md text-on-surface-variant">Crea una categoría para empezar</p>
-        @endforelse
-      </section>
-      <section class="card p-space-lg" data-dinamico="gastos">
-        <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
-          Historial con filtros por categoría y periodo
-        </h2>
-        {{-- DINÁMICO: gastos --}}
-        @forelse(($gastos ?? []) as $item)
-          {{-- Aquí va el diseño de un elemento --}}
-        @empty
-          <p class="font-body-md text-body-md text-on-surface-variant">
-            No hay gastos registrados en este periodo
-          </p>
-        @endforelse
-      </section>
+        <!-- Mensaje de éxito -->
+        @if(session('exito'))
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                {{ session('exito') }}
+            </div>
+        @endif
+
+        <!-- Formulario para Registrar Gasto -->
+        <form action="{{ route('gastos.store') }}" method="POST">
+    @csrf
+    
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Categoría</label>
+                <select name="categoria_id" class="w-full border p-2 rounded mt-1" required>
+                    <option value="">Seleccione...</option>
+                    @foreach($categorias as $cat)
+                        <option value="{{ $cat->id }}">{{ $cat->nombre }} ({{ ucfirst($cat->bloque) }})</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Monto ($)</label>
+                <input type="number" name="monto" min="1" class="w-full border p-2 rounded mt-1" placeholder="Ej: 50000" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Fecha</label>
+                <input type="date" name="fecha" max="{{ date('Y-m-d') }}" class="w-full border p-2 rounded mt-1" required>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Guardar Gasto</button>
+            </div>
+        </form>
+
+        <!-- Tabla de Gastos -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b bg-gray-50">
+                        <th class="p-3">Fecha</th>
+                        <th class="p-3">Categoría</th>
+                        <th class="p-3">Bloque</th>
+                        <th class="p-3 text-right">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($gastos as $gasto)
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="p-3">{{ $gasto->fecha }}</td>
+                            <td class="p-3 font-semibold">{{ $gasto->categoria->nombre ?? 'Sin categoría' }}</td>
+                            <td class="p-3 text-sm text-gray-600">{{ ucfirst($gasto->categoria->bloque ?? 'N/A') }}</td>
+                            <td class="p-3 text-right font-bold text-green-700">$ {{ number_format($gasto->monto, 0, ',', '.') }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="p-4 text-center text-gray-500">No hay gastos registrados aún.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            {{ $gastos->links() }}
+        </div>
     </div>
-  </main>
-@endsection
+</body>
+</html>
