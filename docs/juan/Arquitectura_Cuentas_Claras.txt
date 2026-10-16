@@ -210,6 +210,19 @@ HECHO (J6 - Alertas automáticas y servicio de notificaciones, 2026-10-16, Juan)
   [x] tests/Feature/AlertasTest.php: 7 pruebas verdes.
   [x] docs/backend/07-alertas-programadas.php actualizado.
 
+HECHO (J8a - Servicio de cuentas: eliminar cuenta, 2026-10-16, Juan):    [NUEVO 2026-10-16]
+  [x] ServicioCuentas::eliminarCuenta($usuario) (C7 completo). Borra al usuario y todo lo
+      suyo en una transacción (cascade).
+  [x] No permite eliminar al último administrador activo del sistema. Lanza
+      ValidationException con mensaje claro.
+  [x] Cancela las metas compartidas activas donde el usuario es creador o participante
+      aceptado, y avisa al otro participante con una notificación TIPO_META_ABANDONADA
+      (decisión #18).
+  [x] Si el usuario era el creador de la meta, transfiere metas.creador_id al otro
+      participante antes de borrar; así la meta sobrevive al ON DELETE CASCADE de la FK.
+  [x] tests/Feature/EliminarCuentaTest.php: 6 pruebas.
+  [x] docs/juan/J8_ServicioCuentas_Documentacion.txt.
+
 NO HECHO (todo lo demás):
   [ ] Página 403 con el diseño de la app (hoy sale la página 403 estándar de Laravel).
   [ ] Controladores, FormRequests y servicios de los demás módulos (ver sección 10); solo existen
@@ -223,6 +236,10 @@ NO HECHO (todo lo demás):
   [ ] Pruebas de comportamiento de cada módulo.
   [ ] Imágenes: public/img está vacía; las vistas enlazan imágenes externas temporales
       (lh3.googleusercontent.com). Hay que descargarlas y usar asset('img/...').
+  [ ] Ajustes > Perfil (PUT) y Ajustes > Eliminar cuenta (DELETE): maqueta hasta que V4 los
+      haga. El servicio de eliminar cuenta (J8a) ya está listo; falta la pantalla y la ruta.
+  [ ] Dashboard con datos reales (J8).
+  [ ] Administración (J7).
 
 PUNTO ABIERTO DETECTADO (decisión #23, sección 14): la tabla categorias NO tiene columna "activa",
 pero la sección 11 y la ruta admin.categorias.desactivar hablan de "desactivar" categorías del
@@ -355,7 +372,8 @@ Efecto visual del tipo de cuenta:
   docs/backend/ .............. SOLO documentación (planes en comentarios, sin código).
   tests/ ..................... (R) tests/Feature/{BaseDeDatosTest, AuthTest, PermisosTest,
                                AislamientoTest, MetasTest, AjustesTest, CalculadoraCreditoTest,
-                               GastosFijosTest, InformesTest, AlertasTest}
+                               GastosFijosTest, InformesTest, AlertasTest, EliminarCuentaTest,
+                               GastoFijoControllerTest}
                                · (F) pruebas de cada módulo nuevo
   DECISIONES.md .............. (R) raíz del repositorio.
 
@@ -612,9 +630,12 @@ Caso de referencia del simulador: $10.000.000, 1,5 % mensual, 24 meses
       ServicioMetas::tieneMetasActivas($usuario)
       ServicioMetas::tieneMetasCompartidasActivas($usuario)  (2026-10-08)
       Meta::aportesDelUsuario($id, $desde, $hasta)
-  C7  Cambiar tipo de cuenta y eliminar  Juan (J8) -> Valeria (solo arma la pantalla).
-      ServicioCuentas::cambiarTipo($usuario, 'estandar'|'familiar')  <- HECHO
-      ServicioCuentas::eliminarCuenta($usuario)  <- PENDIENTE (J8)
+  C7  Cambiar tipo de cuenta y eliminar  Juan (J8a, HECHO) -> Valeria (solo arma la pantalla).
+      ServicioCuentas::cambiarTipo($usuario, 'estandar'|'familiar')  <- HECHO (J5 reabierto)
+      ServicioCuentas::eliminarCuenta($usuario)                       <- HECHO (J8a)
+        Reglas: no eliminar al último admin activo; cancelar metas compartidas activas y
+        avisar al otro (decisión #18); transferir creador_id si es necesario; borrado en
+        cascada dentro de una transacción.
   C8  Variables del armazón ............ Juan: $notificacionesPendientes (J6: cuenta real),
       mensaje flash 'exito', usuario autenticado con nombre y rol, ruta "logout".
   C9  Nombres de rutas ................. Juan. No se cambian; uno nuevo se agrega a
@@ -776,14 +797,16 @@ Convenciones de notificaciones (2026-10-16):
   3. J3 autenticación (HECHO 2026-10-06)   4. J4 permisos (HECHO 2026-10-06)
   5. N1 -> N2 -> V1 -> V2 -> V4 (perfil e ingreso)   (V1 y V2 ya están en main)
   6. J5 metas (HECHO 2026-10-07; reabierto 2026-10-08), N3 (HECHO), V3 (HECHO)
-  7. J6 alertas (HECHO 2026-10-16), N4, J8 (dashboard y cuentas), V4 (resto)
+  7. J6 alertas (HECHO 2026-10-16), J8a servicio de cuentas (HECHO 2026-10-16),
+     N4, J8 dashboard, V4 (resto)
   8. J7 administración, N5 landing       9. V5 revisión visual y J9 seguridad/despliegue
   *  Sesión 2026-10-14 (transversal): modo oscuro + tinte por tipo de cuenta + píldora del
      topbar + transiciones. No fue una tarea del plan; salió como refinamiento visual.
   *  Sesión 2026-10-16: J6 completo (alertas + servicio de notificaciones). Refactor de N3
      para que use el servicio. Bugfix de N3 en proximosAVencer.
-Siguiente de Juan: J8 parte "servicio de cuentas" (eliminarCuenta, C7 completo) y luego
-  J8 dashboard. J6 quedó HECHO el 2026-10-16.
+Siguiente de Juan: J8 dashboard (métricas del mes, barra 50/30/20, próximos vencimientos,
+  últimos gastos, notificaciones recientes). Usa C1 (Nikol), C3 (Valeria), C4 (J6) y C6 (J5).
+J6 y J8a quedaron HECHOS el 2026-10-16.
 Antes de J7: cerrar la decisión #23 (columna categorias.activa).
 Al terminar todo (J9): no debe quedar ningún aviso "MAQUETA", ni Route::view de maqueta, ni
 imágenes externas. Comparar php artisan route:list con docs/backend/00-rutas.php.
@@ -840,6 +863,14 @@ DECISIONES DEL 2026-10-16 (J6):                                                [
   #33 Un pago vencido cancela su alerta 'por_vencer' pendiente y crea una 'vencido'.
       No conviven las dos.
   #34 El comando ignora administradores y cuentas suspendidas.
+
+DECISIONES DEL 2026-10-16 (J8a):                                               [NUEVO 2026-10-16]
+  #35 Al eliminar una cuenta con metas compartidas activas, las metas se cancelan y el otro
+      participante recibe una notificación. Si el que se va es el creador, metas.creador_id
+      se transfiere al otro antes de borrar para que la meta sobreviva al ON DELETE CASCADE.
+      Es el mismo comportamiento que "abandonar" en J5.
+  #36 No se puede eliminar al último administrador activo del sistema (regla heredada de J7).
+      Si se quiere eliminar un administrador, primero debe haber otro activo.
 
 Cada decisión se anota en DECISIONES.md (raíz del repositorio) con fecha, qué y por qué.
 
@@ -901,7 +932,12 @@ Instrucciones de notificaciones (2026-10-16):                                  [
  31. Usa las constantes TIPO_* y ESTADO_* del servicio, no strings a mano.
  32. Para evitar duplicados, pásale clave_unica al crear. Formato: "{tipo}:{recurso_id}".
  33. El comando corre con --fecha para pruebas; en producción va sin argumentos (hoy).
-
+Instrucciones de cuentas (2026-10-16):                                         [NUEVO 2026-10-16]
+ 34. Para eliminar una cuenta, usa siempre ServicioCuentas::eliminarCuenta($usuario). No
+     llames $usuario->delete() directamente desde un controlador.
+ 35. Antes de eliminar, el servicio verifica que no sea el último admin activo. Confía en él:
+     captura ValidationException y muestra el mensaje al usuario.
+ 36. Para cambiar el tipo de cuenta, usa ServicioCuentas::cambiarTipo (ya existía).
 
 ----------------------------------------------------------------------
 16. DOCUMENTOS RELACIONADOS
@@ -917,7 +953,7 @@ Instrucciones de notificaciones (2026-10-16):                                  [
   J5_Metas_Compartidas_Documentacion.txt ............. qué cambió en J5
   J5_Rebrir_Metas_y_Ajustes_Cambios_2026-10-08.txt ... qué cambió en la reapertura de J5
   J6_ServicioNotificaciones_Documentacion.txt ........ qué cambió en J6                  [NUEVO 2026-10-16]
-  J8_ServicioCuentas_Documentacion.txt ............... (pendiente)
+  J8_ServicioCuentas_Documentacion.txt ............... qué cambió en J8a (eliminar cuenta)
   Refinamiento_Visual_2026-10-14.txt ................. resumen de la sesión visual (modo oscuro,
                                                        tinte por tipo de cuenta, píldora topbar,
                                                        transiciones, C12 y C13, decisiones #24-#30)

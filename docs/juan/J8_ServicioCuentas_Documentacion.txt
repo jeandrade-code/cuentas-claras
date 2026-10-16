@@ -1,0 +1,192 @@
+======================================================================
+J8a - SERVICIO DE CUENTAS: ELIMINAR CUENTA  ·  DOCUMENTACIÓN
+Responsable: Juan · Fecha: 2026-10-16 · Rama: juan/j8a-eliminar-cuenta
+======================================================================
+Estado: HECHO. php artisan test => 151 pruebas, 630 aserciones, todas pasan
+(145 anteriores + 6 de EliminarCuentaTest).
+
+
+----------------------------------------------------------------------
+1. QUÉ SE HIZO (en una frase por pieza)
+----------------------------------------------------------------------
+  eliminarCuenta ......... borra la cuenta y todo lo suyo (cascade) en una transacción.
+  Último admin ............ impide que el sistema quede sin ningún administrador activo.
+  Metas compartidas ....... al eliminar una cuenta con metas compartidas activas, las
+                            cancela y avisa al otro participante (decisión #18).
+  Transferencia de creador  si el que se va era el creador de la meta, se transfiere
+                            creador_id al otro participante antes de borrar, para que la
+                            meta sobreviva (la FK tiene ON DELETE CASCADE).
+
+
+----------------------------------------------------------------------
+2. ARCHIVOS MODIFICADOS
+----------------------------------------------------------------------
+  app/Services/ServicioCuentas.php .......... + eliminarCuenta()
+                                              + verificarUltimoAdministrador()
+                                              + cancelarMetasCompartidasActivas()
+  tests/Feature/EliminarCuentaTest.php ...... nuevo, 6 pruebas
+
+NO SE TOCÓ: el diseño, los nombres de ruta, la base de datos (no hay migraciones nuevas),
+  cambiarTipo() ni el resto del servicio.
+
+
+----------------------------------------------------------------------
+3. CONTRATO C7 - FIRMA Y COMPORTAMIENTO
+----------------------------------------------------------------------
+  ServicioCuentas::cambiarTipo(User $usuario, string $nuevoTipo): void
+      (ya existía desde J5; sin cambios)
+
+  ServicioCuentas::eliminarCuenta(User $usuario): void            <- NUEVO
+      1. Verifica que no sea el último administrador activo.
+         Si lo es, lanza ValidationException:
+           "No puedes eliminar tu cuenta porque eres el único administrador activo del sistema."
+      2. Cancela las metas compartidas activas donde el usuario es creador o participante
+         aceptado; avisa al otro participante con notificación TIPO_META_ABANDONADA.
+      3. Borra el usuario. La FK en cascada limpia gastos, gastos fijos, pagos,
+         simulaciones, informes, detalles, metas creadas, participaciones, aportes y
+         notificaciones.
+      Todo dentro de DB::transaction.
+
+
+----------------------------------------------------------------------
+4. DETALLE DEL FLUJO DE METAS COMPARTIDAS (DECISIÓN #18)
+----------------------------------------------------------------------
+  Cuando $usuario se va:
+
+  1. Busca metas compartidas en estado activa donde:
+        - $usuario es creador, o
+        - $usuario es participante con estado_invitacion = 'aceptada'.
+
+  2. Por cada meta:
+
+     a) Si $usuario es el creador:
+           - Toma al primer otro participante aceptado.
+           - Si no hay ninguno: continue (la FK CASCADE se llevará la meta; no hay a quién
+             avisar).
+           - Si hay: transfiere metas.creador_id a ese participante. La meta sobrevive.
+
+     b) Marca la meta como estado = 'cancelada'.
+
+     c) Por cada otro participante aceptado:
+           - Crea notificación TIPO_META_ABANDONADA con el mensaje:
+             "La meta compartida "{nombre}" se canceló porque el otro participante eliminó
+              su cuenta."
+           - clave_unica = "meta_abandonada:{meta_id}:{user_id}" (idempotente).
+
+  Nota: los aportes y participaciones históricas se conservan por parte del otro
+  participante. Al borrar al usuario, sus propias participaciones y aportes sí se borran
+  por cascade, pero la meta y los datos del otro quedan.
+
+
+----------------------------------------------------------------------
+5. POR QUÉ TRANSFERIR CREADOR_ID (BUG ENCONTRADO Y CORREGIDO)
+----------------------------------------------------------------------
+  La tabla metas.creador_id es una FK a users.id con ON DELETE CASCADE (J2). Al borrar al
+  creador, la BD elimina la meta automáticamente, aunque antes la hayamos marcado como
+  cancelada. El primer test falló con "Attempt to read property 'estado' on null".
+
+  Solución: antes de borrar al usuario, si es el creador de una meta compartida activa,
+  se le asigna el creador_id al otro participante aceptado. Así la meta sobrevive y el otro
+  ve su historial de aportes, como pedía la decisión #18.
+
+
+----------------------------------------------------------------------
+6. LO QUE VALERIA (V4) TIENE QUE HACER EN SU CONTROLADOR
+----------------------------------------------------------------------
+  public function destroy(Request $request)
+  {
+      $request->validate([
+          'password' => ['required', 'current_password'],
+      ]);
+
+      $usuario = $request->user();
+
+      try {
+          app(\App\Services\ServicioCuentas::class)->eliminarCuenta($usuario);
+      } catch (\Illuminate\Validation\ValidationException $e) {
+          return back()->withErrors($e->errors());
+      }
+
+      auth()->logout();
+      $request->session()->invalidate();
+      $request->session()->regenerateToken();
+
+      return redirect()->route('inicio')
+          ->with('exito', 'Tu cuenta se eliminó correctamente.');
+  }
+
+  Regla: NO cerrar la sesión antes de llamar al servicio (se necesita $request->user()).
+  Y capturar ValidationException para mostrar el mensaje al usuario (último admin activo).
+
+
+----------------------------------------------------------------------
+7. PRUEBAS (tests/Feature/EliminarCuentaTest.php)
+----------------------------------------------------------------------
+  1. eliminar cuenta borra todos los datos del usuario
+  2. no se puede eliminar al ultimo administrador activo
+  3. un administrador si puede eliminarse si hay otro activo
+  4. al eliminar un familiar con meta compartida activa se cancela y se avisa al otro
+  5. eliminar a un usuario no toca los datos de otros
+  6. una meta individual no genera notificacion al eliminar cuenta
+
+
+----------------------------------------------------------------------
+8. CÓMO PROBARLO A MANO
+----------------------------------------------------------------------
+  1. php artisan migrate:fresh --seed   y   php artisan serve
+  2. Entra como familiar@test.com. Crea una meta compartida con otro familiar
+     (regístralo antes) y acéptala desde la otra cuenta.
+  3. Vuelve a la primera cuenta y, en consola:
+       php artisan tinker
+       >>> app(App\Services\ServicioCuentas::class)->eliminarCuenta(App\Models\User::where('email','familiar@test.com')->first());
+  4. Verifica:
+       - El usuario desapareció de users.
+       - La meta tiene estado = 'cancelada' y creador_id apunta al otro.
+       - El otro tiene una notificación tipo 'meta_abandonada'.
+  5. Prueba el caso del último admin:
+       >>> app(App\Services\ServicioCuentas::class)->eliminarCuenta(App\Models\User::where('email','admin@test.com')->first());
+       -> Lanza ValidationException con el mensaje de último administrador activo.
+
+
+----------------------------------------------------------------------
+9. LIMITACIONES Y PENDIENTES
+----------------------------------------------------------------------
+  - El método NO está conectado a la ruta DELETE /ajustes/eliminar-cuenta (V4). Sigue
+    siendo MAQUETA hasta que Valeria termine la pantalla.
+  - J7 (administración) usará el mismo método para el botón "Eliminar usuario" del panel
+    de admin. Recuerda: el admin no puede eliminarse si es el último activo.
+  - Si en algún momento se cambia de opinión y se quiere borrar la meta del todo cuando el
+    creador se va, basta con cambiar el continue por un $meta->delete() explícito.
+  - No hay recuperación de cuentas eliminadas: es un borrado real. La confirmación con
+    contraseña queda del lado de V4.
+
+
+----------------------------------------------------------------------
+10. TEXTO PARA EL PULL REQUEST
+----------------------------------------------------------------------
+Título: [J8a] Servicio de cuentas: eliminar cuenta
+
+Qué se hizo
+- ServicioCuentas::eliminarCuenta() (contrato C7 completo).
+- Impide eliminar al último administrador activo.
+- Cancela metas compartidas activas y avisa al otro participante (decisión #18).
+- Si el usuario era el creador, transfiere creador_id al otro antes de borrar para
+  que la meta sobreviva (evita el ON DELETE CASCADE).
+- 6 pruebas nuevas (EliminarCuentaTest).
+
+Cómo probar
+- php artisan test --filter=EliminarCuentaTest  -> 6 verdes
+- php artisan test                              -> 151 verdes
+
+Notas para quien revise
+- Decisión #18: al eliminar cuenta, las metas compartidas activas se cancelan
+  (mismo comportamiento que "abandonar" en J5).
+- Valeria (V4) llamará a eliminarCuenta() desde Ajustes > Eliminar cuenta.
+- J7 (administración) usará el mismo método.
+
+Lista de terminado: [x] hace lo que dice la guía  [x] nombres de ruta sin cambios
+[x] pruebas pasan  [x] cabeceras actualizadas  [ ] capturas  [ ] revisada por otra persona
+
+======================================================================
+FIN DEL DOCUMENTO
+======================================================================
