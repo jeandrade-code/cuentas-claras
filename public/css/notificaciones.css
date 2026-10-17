@@ -1,4 +1,4 @@
-tests/Feature/*
+/*
  * Estilos exclusivos del Centro de notificaciones (N4).
  */
 
@@ -38,4 +38,36 @@ form button:focus-visible {
     .notificacion-item .text-2xl {
         font-size: 1.25rem;
     }
+}
+/* Colores según el tipo de notificación */
+
+/* Gastos próximos a vencer */
+.notificacion-tipo-por_vencer {
+    border-left: 4px solid #d97706;
+}
+
+/* Gastos vencidos */
+.notificacion-tipo-vencido {
+    border-left: 4px solid #dc2626;
+}
+
+/* Invitaciones a metas */
+.notificacion-tipo-invitacion_meta,
+.notificacion-tipo-invitacion_meta_requiere_familiar {
+    border-left: 4px solid #2563eb;
+}
+
+/* Respuestas a invitaciones */
+.notificacion-tipo-respuesta_meta {
+    border-left: 4px solid #7c3aed;
+}
+
+/* Metas finalizadas */
+.notificacion-tipo-meta_finalizada {
+    border-left: 4px solid #16a34a;
+}
+
+/* Metas abandonadas */
+.notificacion-tipo-meta_abandonada {
+    border-left: 4px solid #64748b;
 }

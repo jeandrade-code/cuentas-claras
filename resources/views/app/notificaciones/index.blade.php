@@ -8,6 +8,15 @@
 
 @section('content')
 <main class="relative pt-16 w-full px-margin min-h-screen bg-surface">
+        @if (session('exito'))
+        <div
+            role="status"
+            class="w-full max-w-7xl mx-auto mt-4 px-4 py-3 rounded-lg"
+            style="background: var(--surface-container-lowest); color: var(--primary); border: 1px solid var(--outline-variant);"
+        >
+            {{ session('exito') }}
+        </div>
+    @endif
     <div class="w-full max-w-7xl mx-auto py-space-lg flex flex-col gap-space-lg">
 
         <header class="flex flex-col gap-2">
@@ -58,10 +67,8 @@
                     };
                 @endphp
 
-                <article
-                    class="notificacion-item mb-4 rounded-xl border p-4"
-                    style="background: var(--surface-container-lowest); border-color: var(--outline-variant);"
-                >
+               <article
+                 class="notificacion-item notificacion-tipo-{{ $item->tipo }} mb-4 rounded-xl border p-4">
                     <div class="flex items-start gap-3">
                         <span aria-hidden="true" class="text-2xl">
                             {{ $icono }}
@@ -142,11 +149,10 @@
                         default => '🔔',
                     };
                 @endphp
-
                 <article
-                    class="notificacion-item mb-4 rounded-xl border p-4"
-                    style="background: var(--surface-container-lowest); border-color: var(--outline-variant);"
-                >
+                     class="notificacion-item mb-4 rounded-xl border p-4"
+                     style="background: var(--surface-container-lowest); border-color: var(--outline-variant);"
+                      >
                     <div class="flex items-start gap-3">
                         <span aria-hidden="true" class="text-2xl">
                             {{ $icono }}
