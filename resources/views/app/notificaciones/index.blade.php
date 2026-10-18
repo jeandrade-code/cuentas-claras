@@ -149,10 +149,10 @@
                         default => '🔔',
                     };
                 @endphp
-                <article
-                     class="notificacion-item mb-4 rounded-xl border p-4"
-                     style="background: var(--surface-container-lowest); border-color: var(--outline-variant);"
-                      >
+               <article
+    class="notificacion-item notificacion-tipo-{{ $item->tipo }} mb-4 rounded-xl border p-4"
+    style="background: var(--surface-container-lowest); border-color: var(--outline-variant);"
+>
                     <div class="flex items-start gap-3">
                         <span aria-hidden="true" class="text-2xl">
                             {{ $icono }}
