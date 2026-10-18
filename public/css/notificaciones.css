@@ -184,3 +184,29 @@
 @media (prefers-reduced-motion: reduce) {
   .notificacion-item--compacta { transition: none; }
 }
+
+/* Colores del borde según el tipo de notificación */
+.notificacion-item--por_vencer {
+  border-left: 4px solid #d97706;
+}
+
+.notificacion-item--vencido {
+  border-left: 4px solid #dc2626;
+}
+
+.notificacion-item--invitacion_meta,
+.notificacion-item--invitacion_meta_requiere_familiar {
+  border-left: 4px solid #2563eb;
+}
+
+.notificacion-item--respuesta_meta {
+  border-left: 4px solid #7c3aed;
+}
+
+.notificacion-item--meta_finalizada {
+  border-left: 4px solid #16a34a;
+}
+
+.notificacion-item--meta_abandonada {
+  border-left: 4px solid #64748b;
+}
