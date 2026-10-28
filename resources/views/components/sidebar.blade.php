@@ -20,16 +20,11 @@
 --}}
 
 {{-- Menú lateral de usuario (estándar / familiar). Metas visible para ambos roles. --}}
-<aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between py-space-lg px-space-md">
+{{-- TOUR: data-tour="menu-lateral" permite que el onboarding resalte este bloque. --}}
+<aside data-tour="menu-lateral" class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between py-space-lg px-space-md">
   <div class="flex flex-col gap-space-lg">
     <div class="flex items-center gap-space-sm px-space-sm">
     <x-logo :alto="36" />
-    </div>
-    <div class="px-space-xs">
-      <a
-        class="w-full flex items-center justify-center gap-space-xs py-2.5 px-space-md bg-primary hover:bg-primary-container text-on-primary rounded-lg font-label-md text-label-md shadow-sm transition-all"
-        href="{{ route('gastos.create') }}"
-      ><span class="material-symbols-outlined text-[18px]">add</span><span>Registrar Gasto</span></a>
     </div>
     <nav
       class="flex flex-col gap-1"

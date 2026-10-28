@@ -1,0 +1,40 @@
+/*
+ * ==============================================================================
+ * ARCHIVO : public/css/auth-forms.css
+ * QUÉ ES  : Estilos compartidos por login, recuperar y restablecer contraseña.
+ * ==============================================================================
+ */
+
+/* Inputs: anillo de foco consistente con el resto del sistema */
+.auth-input:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--primary)) 20%, transparent);
+}
+
+/* Botón principal: hover con el color de marca del rol */
+.auth-btn-primary:hover {
+  background: var(--accent-hover, var(--primary-container));
+}
+
+/* Nota del sidebar: ajuste de contraste en oscuro */
+[data-theme="oscuro"] .auth-aside-note {
+  background: var(--surface-container-low);
+}
+
+/* Estado de "éxito" (session('estado')) */
+.auth-success {
+  background: color-mix(in srgb, var(--accent, var(--primary)) 10%, transparent);
+  color: var(--accent, var(--primary));
+}
+
+/* Responsive: en tablet y móvil el sidebar va debajo del form */
+@media (max-width: 1023px) {
+  .auth-grid > aside { order: 2; }
+  .auth-grid > section { order: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-btn-primary,
+  .auth-input {
+    transition: none;
+  }
+}

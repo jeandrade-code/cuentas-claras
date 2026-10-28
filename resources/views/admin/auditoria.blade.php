@@ -17,7 +17,7 @@
     </header>
 
     {{-- Filtros --}}
-    <section class="card p-space-lg">
+    <section class="card p-space-lg" data-tour="admin-aud-tabla">
       <h2 class="font-headline-sm text-headline-sm text-on-surface mb-space-md">Filtrar</h2>
       <form method="GET" action="{{ route('admin.auditoria') }}" class="admin-form-filtros">
         <div class="admin-form-filtros__campo">
@@ -63,7 +63,7 @@
     </section>
 
     {{-- Tabla --}}
-    <section class="card p-space-lg">
+    <section class="card p-space-lg" data-tour="admin-aud-tabla">
       <header class="admin-lista__cabecera">
         <h2 class="font-headline-md text-headline-md text-on-surface">Registros</h2>
         <span class="admin-lista__contador">

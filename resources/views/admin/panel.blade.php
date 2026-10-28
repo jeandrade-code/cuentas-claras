@@ -11,6 +11,10 @@ NOTA SOBRE style="" inline:
   (<div class="savings" style="width: X%">). El resto usa clases del sistema.
   Si el equipo prefiere cero inline, se puede mover a un data-attribute +
   JS, pero eso implica tocar theme.js (de Juan).
+
+TOUR:
+  data-tour="kpis", "distribucion-roles", "ultimos-usuarios", "ultimas-categorias"
+  + <x-onboarding-tour name="admin-panel" /> al final del contenido.
 ==============================================================================
 --}}
 @extends('layouts.admin')
@@ -30,8 +34,8 @@ NOTA SOBRE style="" inline:
       </div>
     </header>
 
-    {{-- KPIs --}}
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Indicadores generales">
+    {{-- KPIs  ·  TOUR: data-tour="kpis" --}}
+    <section data-tour="kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Indicadores generales">
       <article class="card p-5 flex flex-col gap-1">
         <span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Usuarios totales</span>
         <span class="font-numeric-lg text-numeric-lg text-on-surface font-bold tnum">{{ number_format($totalUsuarios, 0, ',', '.') }}</span>
@@ -66,7 +70,8 @@ NOTA SOBRE style="" inline:
     {{-- Distribución por rol + recordatorios --}}
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-label="Distribución y recordatorios">
 
-      <article class="card p-6 flex flex-col gap-4 lg:col-span-2">
+      {{-- TOUR: data-tour="distribucion-roles" --}}
+      <article data-tour="distribucion-roles" class="card p-6 flex flex-col gap-4 lg:col-span-2">
         <div class="flex items-center justify-between gap-2">
           <h2 class="font-headline-md text-headline-md text-on-surface font-bold">Distribución por rol</h2>
           <span class="font-label-sm text-label-sm text-secondary tnum">
@@ -137,8 +142,8 @@ NOTA SOBRE style="" inline:
 
     </section>
 
-    {{-- Últimos usuarios registrados --}}
-    <section class="card overflow-hidden" aria-label="Últimos usuarios registrados">
+    {{-- Últimos usuarios registrados  ·  TOUR: data-tour="ultimos-usuarios" --}}
+    <section data-tour="ultimos-usuarios" class="card overflow-hidden" aria-label="Últimos usuarios registrados">
       <header class="p-5 border-b border-outline-variant/30 flex items-center justify-between gap-2">
         <h2 class="font-headline-md text-headline-md text-on-surface font-bold">Últimos usuarios registrados</h2>
         <a href="{{ route('admin.usuarios') }}" class="font-label-md text-label-md text-primary font-bold">Ver todos</a>
@@ -192,8 +197,8 @@ NOTA SOBRE style="" inline:
       </div>
     </section>
 
-    {{-- Últimas categorías del sistema --}}
-    <section class="card p-6" aria-label="Últimas categorías del sistema">
+    {{-- Últimas categorías del sistema  ·  TOUR: data-tour="ultimas-categorias" --}}
+    <section data-tour="ultimas-categorias" class="card p-6" aria-label="Últimas categorías del sistema">
       <header class="flex items-center justify-between gap-2 mb-4">
         <h2 class="font-headline-md text-headline-md text-on-surface font-bold">Categorías del sistema recientes</h2>
         <a href="{{ route('admin.categorias') }}" class="font-label-md text-label-md text-primary font-bold">Gestionar</a>
@@ -224,4 +229,7 @@ NOTA SOBRE style="" inline:
     </section>
 
   </div>
+
+  {{-- TOUR: lanza el recorrido guiado del panel admin la primera vez que se visita. --}}
+  <x-onboarding-tour name="admin-panel" />
 @endsection

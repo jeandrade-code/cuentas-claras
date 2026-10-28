@@ -1,128 +1,154 @@
 /*
  * ==============================================================================
  * ARCHIVO : public/js/crear-usuario.js
- * QUÉ ES  : Interacciones visuales del formulario de registro: tarjetas de tipo de cuenta, ojo de
- *           contraseña y medidor de fortaleza.
- * QUÉ HAY QUE HACER (en orden):
- *   1. Confirmar que los ids (card-standard, card-family, tipo_cuenta, password,
- *      strength-label...) coinciden con crear-usuario.blade.php.
- *   2. Si el servidor devuelve errores y old('tipo_cuenta') = familiar, llamar
- *      selectAccountType('family') al cargar para que la tarjeta quede marcada (falta).
- *   3. Mantener la regla de contraseña igual a la de StoreRegistroRequest.
- * CÓMO HACERLO / NOTAS:
- *   - Nada de esto reemplaza la validación del servidor.
+ 
+ * QUÉ ES  : Micro-interacciones del formulario de registro.
+ * HACE    :
+ *   - Alternar entre tarjeta "Personal" y "Familiar" (agrega/remove is-selected).
+ *   - Actualizar el input hidden `tipo_cuenta` al cambiar de tarjeta.
+ *   - Alternar visibilidad de los campos de contraseña.
+ *   - Medidor de fuerza de contraseña (3 barras + check de requisitos).
+ * NO HACE : validación real (eso lo hace el servidor en StoreRegistroRequest).
+ * ACTUALIZADO 2026-10-22:
+ *   - Soporte para la nueva clase .is-selected en las tarjetas.
+ *   - Se mantienen las clases viejas (tarjeta-tinte--estandar/familiar) por
+ *     compatibilidad con estilos previos.
  * ==============================================================================
  */
+(function () {
+  'use strict';
 
-// Marca la tarjeta elegida y guarda el tipo en el campo oculto #tipo_cuenta, que es el que viaja al servidor.
-function selectAccountType(type) {
-  document.getElementById('tipo_cuenta').value = (type === 'standard') ? 'estandar' : 'familiar';
-  const cardStd = document.getElementById('card-standard');
-  const cardFam = document.getElementById('card-family');
-  const radioStd = document.getElementById('radio-standard');
-  const radioFam = document.getElementById('radio-family');
+  /* ------------------------------------------------------------------ */
+  /* Selector de tipo de cuenta (Personal / Familiar)                    */
+  /* ------------------------------------------------------------------ */
+  var cardStandard = document.getElementById('card-standard');
+  var cardFamily   = document.getElementById('card-family');
+  var radioStandard = document.getElementById('radio-standard');
+  var radioFamily   = document.getElementById('radio-family');
+  var hiddenTipo    = document.getElementById('tipo_cuenta');
 
-  if (type === 'standard') {
-    cardStd.classList.remove('bg-surface-container', 'opacity-90');
-    cardStd.classList.add('bg-surface-container-low', 'shadow-sm');
-    radioStd.className = "w-5 h-5 rounded-full bg-primary flex items-center justify-center mt-1";
-    radioStd.innerHTML = '<div class="w-2 h-2 rounded-full bg-surface-container-lowest"></div>';
+  function marcarSeleccion(tipo) {
+    // tipo: 'standard' | 'family'
+    if (cardStandard) {
+      cardStandard.classList.toggle('is-selected', tipo === 'standard');
+    }
+    if (cardFamily) {
+      cardFamily.classList.toggle('is-selected', tipo === 'family');
+    }
 
-    cardFam.classList.remove('bg-surface-container-low', 'shadow-sm');
-    cardFam.classList.add('bg-surface-container', 'opacity-90');
-    radioFam.className = "w-5 h-5 rounded-full bg-outline-variant flex items-center justify-center mt-1";
-    radioFam.innerHTML = '<div class="w-2 h-2 rounded-full bg-surface-container-lowest opacity-0"></div>';
-  } else {
-    cardFam.classList.remove('bg-surface-container', 'opacity-90');
-    cardFam.classList.add('bg-surface-container-low', 'shadow-sm');
-    radioFam.className = "w-5 h-5 rounded-full bg-primary flex items-center justify-center mt-1";
-    radioFam.innerHTML = '<div class="w-2 h-2 rounded-full bg-surface-container-lowest"></div>';
+    // Radio visual: el círculo interior se muestra/oculta
+    if (radioStandard && radioStandard.firstElementChild) {
+      radioStandard.firstElementChild.style.opacity =
+        tipo === 'standard' ? '1' : '0';
+    }
+    if (radioFamily && radioFamily.firstElementChild) {
+      radioFamily.firstElementChild.style.opacity =
+        tipo === 'family' ? '1' : '0';
+    }
 
-    cardStd.classList.remove('bg-surface-container-low', 'shadow-sm');
-    cardStd.classList.add('bg-surface-container', 'opacity-90');
-    radioStd.className = "w-5 h-5 rounded-full bg-outline-variant flex items-center justify-center mt-1";
-    radioStd.innerHTML = '<div class="w-2 h-2 rounded-full bg-surface-container-lowest opacity-0"></div>';
+    // Actualizar el input hidden que viaja al servidor
+    if (hiddenTipo) {
+      hiddenTipo.value = tipo === 'family' ? 'familiar' : 'estandar';
+    }
   }
-}
 
-// Muestra u oculta la contraseña (solo ayuda visual).
-function togglePasswordVisibility(inputId, iconId) {
-  const input = document.getElementById(inputId);
-  const icon = document.getElementById(iconId);
-  if (!input || !icon) return;
+  // Exponer globalmente para el onclick del Blade
+  window.selectAccountType = function (tipo) {
+    marcarSeleccion(tipo);
+  };
 
-  if (input.type === 'password') {
-    input.type = 'text';
-    icon.textContent = 'visibility_off';
-  } else {
-    input.type = 'password';
-    icon.textContent = 'visibility';
+  // Estado inicial: leer lo que el servidor puso en el hidden (old o request)
+  if (hiddenTipo) {
+    var inicial = hiddenTipo.value === 'familiar' ? 'family' : 'standard';
+    marcarSeleccion(inicial);
   }
-}
 
-// Medidor de seguridad de la clave. El servidor valida la regla real (mínimo 8 caracteres).
-function evaluatePasswordStrength(val) {
-  const bar1 = document.getElementById('bar-1');
-  const bar2 = document.getElementById('bar-2');
-  const bar3 = document.getElementById('bar-3');
-  const label = document.getElementById('strength-label');
+  // Accesibilidad: Enter/Space en las tarjetas
+  [cardStandard, cardFamily].forEach(function (card) {
+    if (!card) return;
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
+    });
+  });
 
-  const reqLen = document.getElementById('req-len');
-  const reqNum = document.getElementById('req-num');
-  const reqSym = document.getElementById('req-sym');
+  /* ------------------------------------------------------------------ */
+  /* Mostrar/ocultar contraseña                                          */
+  /* ------------------------------------------------------------------ */
+  window.togglePasswordVisibility = function (inputId, iconId) {
+    var input = document.getElementById(inputId);
+    var icon  = document.getElementById(iconId);
+    if (!input) return;
+    var mostrar = input.type === 'password';
+    input.type = mostrar ? 'text' : 'password';
+    if (icon) {
+      icon.textContent = mostrar ? 'visibility_off' : 'visibility';
+    }
+  };
 
-  const hasLen = val.length >= 8;
-  const hasNum = /\d/.test(val);
-  const hasSymOrUpper = /[^A-Za-z0-9]/.test(val) || /[A-Z]/.test(val);
-
-  // Requirement indicators
-  updateReqItem(reqLen, hasLen);
-  updateReqItem(reqNum, hasNum);
-  updateReqItem(reqSym, hasSymOrUpper);
-
-  let score = 0;
-  if (hasLen) score++;
-  if (hasNum) score++;
-  if (hasSymOrUpper) score++;
-
-  if (val.length === 0) {
-    label.textContent = 'Mínima';
-    label.className = 'font-label-sm text-label-sm text-secondary font-bold';
-    bar1.className = 'h-full w-1/3 bg-error rounded-full transition-all duration-300';
-    bar2.className = 'h-full w-1/3 bg-surface-container-highest rounded-full transition-all duration-300';
-    bar3.className = 'h-full w-1/3 bg-surface-container-highest rounded-full transition-all duration-300';
-  } else if (score === 1) {
-    label.textContent = 'Débil';
-    label.className = 'font-label-sm text-label-sm text-error font-bold';
-    bar1.className = 'h-full w-1/3 bg-error rounded-full transition-all duration-300';
-    bar2.className = 'h-full w-1/3 bg-surface-container-highest rounded-full transition-all duration-300';
-    bar3.className = 'h-full w-1/3 bg-surface-container-highest rounded-full transition-all duration-300';
-  } else if (score === 2) {
-    label.textContent = 'Media';
-    label.className = 'font-label-sm text-label-sm text-secondary font-bold';
-    bar1.className = 'h-full w-1/3 bg-secondary-container rounded-full transition-all duration-300';
-    bar2.className = 'h-full w-1/3 bg-secondary-container rounded-full transition-all duration-300';
-    bar3.className = 'h-full w-1/3 bg-surface-container-highest rounded-full transition-all duration-300';
-  } else if (score === 3) {
-    label.textContent = 'Fuerte y Segura';
-    label.className = 'font-label-sm text-label-sm text-primary font-bold';
-    bar1.className = 'h-full w-1/3 bg-primary rounded-full transition-all duration-300';
-    bar2.className = 'h-full w-1/3 bg-primary rounded-full transition-all duration-300';
-    bar3.className = 'h-full w-1/3 bg-primary rounded-full transition-all duration-300';
+  /* ------------------------------------------------------------------ */
+  /* Medidor de fuerza de contraseña                                     */
+  /* ------------------------------------------------------------------ */
+  function setCheck(el, ok) {
+    if (!el) return;
+    var icon = el.querySelector('.material-symbols-outlined');
+    if (!icon) return;
+    icon.textContent = ok ? 'check_circle' : 'radio_button_unchecked';
+    el.classList.toggle('text-primary', ok);
+    el.classList.toggle('text-secondary', !ok);
   }
-}
 
-// Pinta cada requisito (8 caracteres, número, símbolo/mayúscula) como cumplido o pendiente.
-function updateReqItem(element, isValid) {
-  if (!element) return;
-  const icon = element.querySelector('.material-symbols-outlined');
-  if (isValid) {
-    icon.textContent = 'check_circle';
-    icon.className = 'material-symbols-outlined text-xs text-primary';
-    element.className = 'flex items-center gap-1 text-on-surface font-semibold';
-  } else {
-    icon.textContent = 'radio_button_unchecked';
-    icon.className = 'material-symbols-outlined text-xs text-secondary';
-    element.className = 'flex items-center gap-1 text-on-surface-variant font-normal';
+  function setBar(el, colorClass, active) {
+    if (!el) return;
+    // Limpiar clases de color
+    el.classList.remove('bg-error', 'bg-tertiary-container', 'bg-primary',
+                         'bg-surface-container-highest');
+    el.classList.add(active ? colorClass : 'bg-surface-container-highest');
   }
-}
+
+  window.evaluatePasswordStrength = function (valor) {
+    valor = String(valor || '');
+
+    var tieneLen = valor.length >= 8;
+    var tieneNum = /\d/.test(valor);
+    var tieneSym = /[A-Z!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(valor);
+
+    setCheck(document.getElementById('req-len'), tieneLen);
+    setCheck(document.getElementById('req-num'), tieneNum);
+    setCheck(document.getElementById('req-sym'), tieneSym);
+
+    var score = [tieneLen, tieneNum, tieneSym].filter(Boolean).length;
+    var label = document.getElementById('strength-label');
+    var bar1  = document.getElementById('bar-1');
+    var bar2  = document.getElementById('bar-2');
+    var bar3  = document.getElementById('bar-3');
+
+    // Sin contraseña escrita: estado mínimo
+    if (valor.length === 0) {
+      if (label) { label.textContent = 'Mínima'; label.className = 'font-label-sm text-label-sm text-secondary font-bold'; }
+      setBar(bar1, 'bg-error', false);
+      setBar(bar2, 'bg-error', false);
+      setBar(bar3, 'bg-error', false);
+      return;
+    }
+
+    if (score <= 1) {
+      if (label) { label.textContent = 'Débil'; label.className = 'font-label-sm text-label-sm text-error font-bold'; }
+      setBar(bar1, 'bg-error', true);
+      setBar(bar2, 'bg-error', false);
+      setBar(bar3, 'bg-error', false);
+    } else if (score === 2) {
+      if (label) { label.textContent = 'Media'; label.className = 'font-label-sm text-label-sm text-tertiary font-bold'; }
+      setBar(bar1, 'bg-tertiary-container', true);
+      setBar(bar2, 'bg-tertiary-container', true);
+      setBar(bar3, 'bg-tertiary-container', false);
+    } else {
+      if (label) { label.textContent = 'Fuerte'; label.className = 'font-label-sm text-label-sm text-primary font-bold'; }
+      setBar(bar1, 'bg-primary', true);
+      setBar(bar2, 'bg-primary', true);
+      setBar(bar3, 'bg-primary', true);
+    }
+  };
+})();

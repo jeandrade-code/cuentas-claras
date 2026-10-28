@@ -17,7 +17,7 @@
     </header>
 
     {{-- KPIs principales --}}
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md" data-tour="admin-est-kpis">
       <div class="admin-kpi">
         <div class="admin-kpi__icono admin-kpi__icono--azul">
           <span class="material-symbols-outlined">group</span>
@@ -63,7 +63,7 @@
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
 
       {{-- Usuarios por rol --}}
-      <div class="card p-space-lg">
+      <div class="card p-space-lg" data-tour="admin-est-roles">
         <header class="admin-panel__cabecera">
           <div class="flex items-center gap-space-sm">
             <span class="material-symbols-outlined text-[22px] admin-panel__icono">badge</span>
@@ -112,7 +112,7 @@
       </div>
 
       {{-- Notificaciones por tipo --}}
-      <div class="card p-space-lg">
+      <div class="card p-space-lg" data-tour="admin-est-notif">
         <header class="admin-panel__cabecera">
           <div class="flex items-center gap-space-sm">
             <span class="material-symbols-outlined text-[22px] admin-panel__icono">campaign</span>

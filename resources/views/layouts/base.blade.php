@@ -36,9 +36,30 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>
-      @yield('titulo', 'Cuentas Claras')
-    </title>
+    {{-- ========================================================= --}}
+    {{-- OPTIMIZACIÓN SEO                                        --}}
+    {{-- ========================================================= --}}
+    <title>@yield('titulo', 'Cuentas Claras - Gestión de Finanzas Personales')</title>
+    <meta name="description" content="@yield('meta_description', 'Plataforma web para administrar tus finanzas personales. Controla gastos, simula créditos y alcanza tus metas de ahorro.')">
+    <link rel="canonical" href="{{ url()->current() }}">
+    
+    {{-- Control de indexación (por defecto indexa, las vistas privadas lo bloquean) --}}
+    <meta name="robots" content="@yield('meta_robots', 'index, follow')">
+
+    {{-- Open Graph (WhatsApp, Facebook, LinkedIn) --}}
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="@yield('titulo', 'Cuentas Claras')">
+    <meta property="og:description" content="@yield('meta_description', 'Plataforma web para administrar tus finanzas personales.')">
+    <meta property="og:image" content="@yield('meta_image', asset('img/hero-main.jpg'))">
+
+    {{-- Twitter Cards (X) --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url()->current() }}">
+    <meta name="twitter:title" content="@yield('titulo', 'Cuentas Claras')">
+    <meta name="twitter:description" content="@yield('meta_description', 'Plataforma web para administrar tus finanzas personales.')">
+    <meta name="twitter:image" content="@yield('meta_image', asset('img/hero-main.jpg'))">
+    {{-- ========================================================= --}}
 
     {{-- Color de la barra del navegador en móvil (se actualiza con JS) --}}
     <meta name="theme-color" content="#f8f9ff" id="meta-theme-color">

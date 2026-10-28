@@ -8,6 +8,7 @@
 --}}
 
 @extends('layouts.base')
+@section('meta_robots', 'noindex, nofollow')
 @section('body')
   <x-sidebar-admin />
   <div class="nav-backdrop" data-nav-close></div>

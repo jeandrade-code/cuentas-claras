@@ -31,6 +31,7 @@ class User extends Authenticatable
         'password',
         'ingreso_mensual',
         'consentimiento_datos_at',
+        'foto_perfil',
     ];
 
     protected $hidden = [
@@ -45,12 +46,12 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'password'                  => 'hashed',
-            'activo'                    => 'boolean',
-            'ingreso_mensual'           => 'integer',
-            'consentimiento_datos_at'   => 'datetime',
-            'pending_email_expires_at'  => 'datetime',
-            'last_login_at'             => 'datetime',
+            'password' => 'hashed',
+            'activo' => 'boolean',
+            'ingreso_mensual' => 'integer',
+            'consentimiento_datos_at' => 'datetime',
+            'pending_email_expires_at' => 'datetime',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -93,10 +94,41 @@ class User extends Authenticatable
         ])->save();
     }
 
-    public function gastos(): HasMany { return $this->hasMany(Gasto::class); }
-    public function categorias(): HasMany { return $this->hasMany(Categoria::class); }
-    public function gastosFijos(): HasMany { return $this->hasMany(GastoFijo::class); }
-    public function simulaciones(): HasMany { return $this->hasMany(SimulacionCredito::class); }
-    public function informes(): HasMany { return $this->hasMany(Informe::class); }
-    public function notificaciones(): HasMany { return $this->hasMany(Notificacion::class); }
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (!$this->foto_perfil)
+            return null;
+        if (!\Storage::disk('public')->exists($this->foto_perfil))
+            return null;
+
+        // URL relativa: '/storage/avatares/xxx.jpg'
+        // El navegador la resuelve contra el origen actual (localhost, 127.0.0.1,
+        // dominio real en producción...). CSP 'self' siempre la permite.
+        return '/storage/' . ltrim($this->foto_perfil, '/');
+    }
+
+    public function gastos(): HasMany
+    {
+        return $this->hasMany(Gasto::class);
+    }
+    public function categorias(): HasMany
+    {
+        return $this->hasMany(Categoria::class);
+    }
+    public function gastosFijos(): HasMany
+    {
+        return $this->hasMany(GastoFijo::class);
+    }
+    public function simulaciones(): HasMany
+    {
+        return $this->hasMany(SimulacionCredito::class);
+    }
+    public function informes(): HasMany
+    {
+        return $this->hasMany(Informe::class);
+    }
+    public function notificaciones(): HasMany
+    {
+        return $this->hasMany(Notificacion::class);
+    }
 }

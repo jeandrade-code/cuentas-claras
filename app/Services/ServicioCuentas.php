@@ -87,11 +87,11 @@ class ServicioCuentas
         }
 
         $tokenPlano = Str::random(64);
-        $tokenHash  = hash('sha256', $tokenPlano);
+        $tokenHash = hash('sha256', $tokenPlano);
 
         DB::transaction(function () use ($usuario, $nuevoCorreo, $tokenHash) {
-            $usuario->pending_email            = $nuevoCorreo;
-            $usuario->email_token              = $tokenHash;
+            $usuario->pending_email = $nuevoCorreo;
+            $usuario->email_token = $tokenHash;
             $usuario->pending_email_expires_at = now()->addHour();
             $usuario->save();
         });
@@ -119,10 +119,10 @@ class ServicioCuentas
         }
 
         $tokenPlano = Str::random(64);
-        $tokenHash  = hash('sha256', $tokenPlano);
+        $tokenHash = hash('sha256', $tokenPlano);
 
         DB::transaction(function () use ($usuario, $tokenHash) {
-            $usuario->email_token              = $tokenHash;
+            $usuario->email_token = $tokenHash;
             $usuario->pending_email_expires_at = now()->addHour();
             $usuario->save();
         });
@@ -146,33 +146,39 @@ class ServicioCuentas
     {
         $tokenHash = hash('sha256', $token);
 
-        if (!$usuario->email_token
+        if (
+            !$usuario->email_token
             || !$usuario->pending_email
-            || !hash_equals($usuario->email_token, $tokenHash)) {
+            || !hash_equals($usuario->email_token, $tokenHash)
+        ) {
             throw ValidationException::withMessages([
                 'token' => 'El enlace de confirmación no es válido o ya expiró.',
             ]);
         }
 
-        if (!$usuario->pending_email_expires_at
-            || $usuario->pending_email_expires_at->isPast()) {
+        if (
+            !$usuario->pending_email_expires_at
+            || $usuario->pending_email_expires_at->isPast()
+        ) {
             throw ValidationException::withMessages([
                 'token' => 'El enlace de confirmación expiró. Solicita uno nuevo.',
             ]);
         }
 
-        if (User::where('email', $usuario->pending_email)
-            ->where('id', '!=', $usuario->id)
-            ->exists()) {
+        if (
+            User::where('email', $usuario->pending_email)
+                ->where('id', '!=', $usuario->id)
+                ->exists()
+        ) {
             throw ValidationException::withMessages([
                 'token' => 'Ese correo ya fue confirmado por otra cuenta.',
             ]);
         }
 
         DB::transaction(function () use ($usuario) {
-            $usuario->email                    = $usuario->pending_email;
-            $usuario->pending_email            = null;
-            $usuario->email_token              = null;
+            $usuario->email = $usuario->pending_email;
+            $usuario->pending_email = null;
+            $usuario->email_token = null;
             $usuario->pending_email_expires_at = null;
             $usuario->save();
         });
@@ -190,6 +196,10 @@ class ServicioCuentas
 
         DB::transaction(function () use ($usuario) {
             $this->cancelarMetasCompartidasActivas($usuario);
+            // Borrar la foto de perfil del storage antes de eliminar la cuenta.
+            if ($usuario->foto_perfil && \Storage::disk('public')->exists($usuario->foto_perfil)) {
+                \Storage::disk('public')->delete($usuario->foto_perfil);
+            }
             $usuario->delete();
         });
     }
@@ -214,8 +224,10 @@ class ServicioCuentas
             $this->verificarUltimoAdministrador($usuario);
         }
 
-        if ($usuario->rol === 'familiar' && $nuevoRol === 'estandar'
-            && $this->metas->tieneMetasCompartidasActivas($usuario)) {
+        if (
+            $usuario->rol === 'familiar' && $nuevoRol === 'estandar'
+            && $this->metas->tieneMetasCompartidasActivas($usuario)
+        ) {
             throw ValidationException::withMessages([
                 'rol' => 'Debes finalizar o cancelar las metas compartidas activas antes de bajar a estándar.',
             ]);
@@ -293,7 +305,7 @@ class ServicioCuentas
         foreach ($metas as $meta) {
             $otrosParticipantes = $meta->participaciones
                 ->filter(
-                    fn ($p) =>
+                    fn($p) =>
                         (int) $p->user_id !== (int) $usuario->id
                         && $p->estado_invitacion === 'aceptada'
                 );
@@ -326,7 +338,7 @@ class ServicioCuentas
                         $meta->nombre
                     ),
                     [
-                        'meta_id'     => $meta->id,
+                        'meta_id' => $meta->id,
                         'clave_unica' => 'meta_abandonada:' . $meta->id . ':' . $otro->id,
                     ]
                 );

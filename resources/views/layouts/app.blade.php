@@ -8,7 +8,7 @@
 --}}
 
 @extends('layouts.base')
-
+@section('meta_robots', 'noindex, nofollow')
 @section('body')
   @if (auth()->check() && auth()->user()->rol === 'administrador')
     <x-sidebar-admin />

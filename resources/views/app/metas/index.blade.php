@@ -33,7 +33,7 @@
 @section('content')
   <main class="relative pt-16 w-full px-margin min-h-screen bg-surface">
     <div class="w-full max-w-7xl mx-auto py-space-lg flex flex-col gap-space-lg">
-      <header class="metas-encabezado">
+      <header class="metas-encabezado" data-tour="metas-header">
         @if(! $esFamiliar)
           <section class="card p-space-md" role="note">
             <p class="font-body-md text-body-md text-on-surface-variant">
@@ -53,7 +53,7 @@
         </a>
       </header>
 
-      <section class="card p-space-lg" data-dinamico="nueva-meta">
+      <section class="card p-space-lg" data-dinamico="nueva-meta" data-tour="metas-form">
         <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
           {{ $esFamiliar ? 'Crear una meta' : 'Crear una meta' }}
         </h2>
@@ -96,7 +96,7 @@
         </form>
       </section>
 
-      <section class="card p-space-lg" data-dinamico="metas">
+      <section class="card p-space-lg" data-dinamico="metas" data-tour="metas-lista">
         <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">Mis metas</h2>
         @forelse($metas as $meta)
           @php($porcentaje = $meta->porcentaje())
@@ -130,4 +130,6 @@
       </section>
     </div>
   </main>
+    {{-- ONBOARDING TOUR --}}
+  <x-onboarding-tour name="metas" :auto-start="true" />
 @endsection

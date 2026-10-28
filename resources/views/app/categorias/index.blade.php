@@ -33,7 +33,7 @@
             @endif
 
             {{-- FORMULARIO CREAR --}}
-            <form method="POST" action="{{ route('categorias.store') }}" class="categoria-form-crear">
+            <form method="POST" action="{{ route('categorias.store') }}" class="categoria-form-crear" data-tour="cat-form">
                 @csrf
 
                 <h3 class="font-headline-sm text-headline-sm text-on-surface mb-4">
@@ -70,7 +70,7 @@
                 </div>
 
                 {{-- SELECTOR DE ICONOS (CREAR) --}}
-                <div class="mt-4">
+                <div class="mt-4" data-tour="cat-iconos">
                     <label class="block font-label-md text-label-md text-on-surface-variant mb-2">
                         Icono de la categoría (opcional)
                     </label>
@@ -195,6 +195,7 @@
             @endif
 
             {{-- LISTADO DE CATEGORÍAS --}}
+            <div data-tour="cat-lista">
             @forelse(($categorias ?? []) as $item)
                 <div class="categoria-item">
                     <div class="categoria-item__info">
@@ -353,7 +354,10 @@
                     Aún no tienes categorías propias.
                 </p>
             @endforelse
+            </div>
         </section>
     </div>
 </main>
+{{-- ONBOARDING TOUR --}}
+<x-onboarding-tour name="categorias" :auto-start="true" />
 @endsection

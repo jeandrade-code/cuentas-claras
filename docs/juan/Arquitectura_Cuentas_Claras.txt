@@ -7,61 +7,45 @@ QUÉ falta, CÓMO está organizado, TODAS las rutas y las reglas que no se puede
 Versión: después de J1..J8, J6, J5, V1..V5, N1..N5, verificación de correo, rediseño
 del correo de reset, restricción de Ajustes al admin, página 404, expiración de
 sesión, iconografía por categoría, íconos personalizables, dashboard del admin,
-y las mejoras de seguridad de J9 (auditoría, notificaciones, CSP, re-auth, throttles).
-Fecha: 2026-10-22.
+mejoras de seguridad de J9 (auditoría, notificaciones, CSP, re-auth, throttles),
+ONBOARDING TOUR, ADMIN ELIMINA CATEGORÍAS y FOTO DE PERFIL.
+Fecha: 2026-10-22 (v2).
 
-Cambios respecto al 2026-10-21:
-  · J9 (seguridad) AVANZADO:
-    - Auditoría de acciones del admin: tabla `auditorias`, modelo, servicio,
-      controlador, vista, ruta y sidebar. Decisión #61. Cierra #44.
-    - Notificaciones de seguridad por correo (AlertaSeguridad): password.changed,
-      email.changed, account.suspended, login.new_ip, login.blocked.
-      Decisión #62.
-    - Re-autenticación para acciones destructivas: eliminar usuario y
-      activar/desactivar categoría del sistema piden `current_password`.
-      Decisión #63.
-    - CSP (Content-Security-Policy) permisiva en SecurityHeaders.
-      Decisión #64.
-    - Regeneración de sesión verificada con test. Decisión #65.
-    - Notificación de bloqueo por intentos fallidos (login.blocked).
-      Decisión #66.
-    - Columnas users.last_login_ip y users.last_login_at + métodos
-      User::esIpNueva() / User::registrarLogin().
-    - Throttles inline: registro.guardar, password.email, password.update,
-      ajustes.confirmar-correo.reenviar, admin.usuarios.rol.
-    - Procedimiento de backup documentado en docs/juan/J9_Checklist_Previo.txt
-      (creación, restauración, verificación, incidencias).
-    - deploy.sh con `composer audit` integrado (aborta si falla).
-    - TODO(J8) CERRADO: DashboardController usa Gasto::delPeriodo vía
-      scopeDelPeriodo (antes whereYear/whereMonth inline).
-    - Fix bug: AuthTest.php tenía `class UsuariosTest` (35 tests no corrían).
-    - Fix bug: ajustes.php tenía `/ajustes/ajustes/confirmar-correo/reenviar`
-      (URL duplicada). Corregido a `/ajustes/confirmar-correo/reenviar`.
-    - Fix bug: UsuariosTest.php le faltaba `use Illuminate\Support\Facades\Notification`.
-    - Fix bug: AjustesTest::test_confirmar_correo_notifica_al_correo_viejo
-      usaba `assertSentTo` en vez de `assertSentOnDemand`.
-    - Fix bug: CategoriasSistemaTest::test_no_se_puede_desactivar_categoria_personal
-      daba 302 en vez de 403 porque el `abort_unless` estaba en el controlador
-      (validación de password lo interceptaba antes). Movido al `authorize()`
-      del FormRequest.
+Cambios respecto al 2026-10-22 (v1):
+  · ONBOARDING TOUR (motor sin dependencias):
+    - public/js/onboarding.js + public/css/onboarding.css.
+    - Componente <x-onboarding-tour name="..." :auto-start="..." />.
+    - Tours: dashboard (7 pasos) y admin-panel (6 pasos).
+    - Targets con data-tour="..." en dashboard, admin/panel, sidebar,
+      sidebar-admin y topbar (botón hamburguesa).
+    - Botón "Ver tour de nuevo" en Ajustes/Perfil (data-tour-start).
+    - Evento cc-tour:finished revela la welcome card del dashboard.
+    - Persistencia en localStorage cc-tour:{name}.
+    - API pública: CCOnboarding.start / autoStart / restart / reset / isDone.
+    - Decisión #68.
 
-  · J9 PENDIENTE (documentado como J9.2):
-    - 2FA (TOTP) para usuarios y admin. Paquetes: pragmarx/google2fa +
-      bacon/bacon-qr-code. Arquitectura completa diseñada (no implementada
-      por bloqueo de instalación de Composer en el entorno local). Decisión #67.
-    - `composer audit` no se pudo correr (Composer no accesible desde
-      Git Bash del entorno local; ver nota en §3).
-    - Auditoría de logs (`grep "Log::" app/`) no se pudo correr.
-    - Script backup-cuentas-claras.sh no está instalado en servidor (solo
-      documentado el procedimiento).
+  · ADMIN PUEDE ELIMINAR CATEGORÍAS DEL SISTEMA:
+    - Ruta nueva: DELETE /admin/categorias/{categoria}
+      (admin.categorias.destroy, throttle:30,1).
+    - CategoriaSistemaController@destroy con re-auth y auditoría.
+    - Solo se elimina si gastos_count + gastos_fijos_count = 0.
+    - Si tiene referencias: error "Está en uso".
+    - UI: botón "Eliminar" en admin/categorias (deshabilitado si en uso).
+    - Decisión #69.
 
-  · N5 (landing + páginas legales) SIGUE EN CURSO. No se tocó en esta sesión.
+  · FOTO DE PERFIL (para cualquier rol, incluido admin):
+    - Migración 2026_10_22_100000_agregar_foto_perfil_a_users_table.
+    - Columna users.foto_perfil (string 255, nullable).
+    - Archivo en storage/app/public/avatares/ (dev) o S3/R2 (prod).
+    - Accessor User::avatar_url (URL relativa en dev).
+    - Componente <x-user-avatar> con fallback a iniciales.
+    - Campo en Ajustes/Perfil con avatar inline + overlay "Cambiar ícono".
+    - Se borra al eliminar la cuenta.
+    - Sección §17 dedicada a almacenamiento (dev + prod).
+    - Decisión #70.
 
-Rutas: +1 = 68 rutas reales (11+9+37+0+11) + Route::fallback() = 69 mostradas
-por artisan. Se agrega admin.auditoria (GET /admin/auditoria). Se documentan las
-2 rutas que estaban sin doc: gastos.edit (GET /gastos/{gasto}/editar) y
-notificaciones.leerTodas (POST /notificaciones/leer-todas).
-
+Rutas: +1 = 69 rutas reales (11+9+37+0+12) + Route::fallback() = 70 mostradas
+por artisan.
 
 ----------------------------------------------------------------------
 1. QUÉ ES EL SISTEMA
@@ -85,23 +69,32 @@ pesos colombianos (COP, siempre enteros, nunca decimales). Permite:
   - Administración (usuarios, roles, categorías del sistema, estadísticas agregadas
     y dashboard del administrador en /admin/panel).
   - El admin también puede elegir el ícono de cada categoría del sistema.
-  - Auditoría de acciones del admin en /admin/auditoria (solo lectura).  [NUEVO 2026-10-22]
+  - Auditoría de acciones del admin en /admin/auditoria (solo lectura).
   - Modo claro / oscuro con persistencia en localStorage y favicon dinámico.
   - Tinte por rol: verde (estándar), morado (familiar), azul (administrador).
   - Iconografía por categoría (SVG propio, color por bloque 50/30/20, personalizable).
   - Skip link, página 403 y 404 personalizadas, expiración de sesión (15 min),
     correos con identidad de marca.
-  - Seguridad reforzada en J9:                                              [NUEVO 2026-10-22]
+  - Seguridad reforzada en J9:
     · CSP (Content-Security-Policy) + X-Frame-Options + nosniff + HSTS.
     · Notificaciones de seguridad por correo (password/email/account/login).
     · Re-autenticación (current_password) para acciones destructivas.
     · Registro de auditoría de cada cambio hecho por el admin.
     · Notificación al usuario cuando sus intentos de login se bloquean.
+  - Onboarding tour guiado (7 pasos en dashboard, 6 en admin) con spotlight,
+    tooltip que se posiciona arriba/abajo del target, persistencia en
+    localStorage, y botón "Ver tour de nuevo" en Ajustes/Perfil.
+  - Foto de perfil circular, editable desde Ajustes/Perfil mediante un overlay
+    "Cambiar ícono" que abre el selector de archivos.
+  - El administrador puede eliminar categorías del sistema SOLO si no tienen
+    gastos ni gastos fijos asociados.
+  - Almacenamiento de imágenes: dev usa symlink local (storage:link),
+    producción puede migrar a S3/R2 sin cambiar el código (el disk 'public' es
+    la abstracción).
 El diseño visual YA ESTÁ HECHO (vistas Blade + CSS + JS). EL DISEÑO NO SE CAMBIA.
 
 Equipo: Juan (base, seguridad, reglas), Nikol (dinero del día a día), Valeria (cálculo y
 análisis). Tareas J1..J9, N1..N5, V1..V5.
-
 
 ----------------------------------------------------------------------
 2. ESTADO ACTUAL
@@ -165,8 +158,7 @@ HECHO (J8 - Dashboard, 2026-10-16, Juan):
   [x] app/Models/Gasto.php: casts de fecha y monto.
   [x] tests/Feature/DashboardTest.php: 8 pruebas.
   [x] theme.css reescrito. gastos-fijos.css con bloque de modo oscuro.
-  [x] TODO(J8) CERRADO (2026-10-22): whereYear/whereMonth reemplazados por
-      Gasto::delPeriodo($anio, $mes). Scope añadido en app/Models/Gasto.php. [ACTUALIZADO 2026-10-22]
+  [x] TODO(J8) CERRADO (2026-10-22): Gasto::delPeriodo usado en DashboardController.
 
 HECHO (J7 - Administración, 2026-10-16, Juan):
   [x] Migración #23: categorias.activa + índice (user_id, activa).
@@ -210,7 +202,7 @@ HECHO (V4 - Ajustes completo, 2026-10-17, Valeria):
   [x] Vistas app/ajustes/*.
   [x] Aviso "cambio de correo pendiente" con reenvío.
   [x] Fix del remember_token al eliminar.
-  [x] tests/Feature/AjustesTest.php: 25 pruebas (21 originales + 4 de J9). [ACTUALIZADO 2026-10-22]
+  [x] tests/Feature/AjustesTest.php: 25 pruebas.
 
 HECHO (V5 - Revisión visual):
   [x] Checklist en 1440, 768, 390 px.
@@ -220,7 +212,7 @@ HECHO (V5 - Revisión visual):
 HECHO (N1 - Gastos):
   [x] GastoController: index, create, store, update, destroy, edit.
   [x] Filtro por mes y total del mes (C1).
-  [x] Scope delPeriodo en Gasto (cierra el pendiente de C1).
+  [x] Scope delPeriodo en Gasto.
   [x] Vistas app/gastos/index y create.
   [x] Pruebas con fábricas + aislamiento.
 
@@ -283,158 +275,129 @@ HECHO (Iconografía por categoría y tarjetas compactas, 2026-10-19):
   [x] Categorías con botones del sistema, SVG de candado, modal de traslado.
 
 HECHO (Ícono personalizable por categoría, 2026-10-20):
-  [x] Migración 2026_10_20_155857_agregar_icono_a_categorias_table:
-      columna categorias.icono (string 20, nullable). null = fallback automático.
-  [x] app/Models/Categoria.php: constante ICONOS (16 opciones con etiqueta) +
-      método iconoResuelto() con prioridad: ícono guardado > nombre mapeado
-      (sistema) > bloque 50/30/20.
-  [x] StoreCategoriaRequest: valida 'icono' con Rule::in(ICONOS). Normaliza
-      string vacío a null en prepareForValidation().
-  [x] CategoriaController@store: guarda 'icono' en el create (antes lo descartaba).
-  [x] CategoriaController@update: $request->validated() completo (ya guardaba).
-  [x] <x-categoria-icono>: acepta prop :icono explícito. Prioridad:
-      prop → BD → nombre → bloque.
-  [x] Vista categorias/index: selector visual (radios estilizados) en crear y
-      editar. Opción "auto" (varita mágica) = fallback.
-  [x] CSS: .categoria-icono-selector + .categoria-icono-label con tokens y
-      estado :checked vía :has().
-  [x] Admin: StoreCategoriaSistemaRequest y UpdateCategoriaSistemaRequest
-      validan 'icono'. CategoriaSistemaController guarda en store y update.
-  [x] Vista admin/categorias: selector en crear y editar, ícono al lado del
-      nombre en el listado. Misma estética que la vista de usuario.
+  [x] Migración 2026_10_20_155857_agregar_icono_a_categorias_table.
+  [x] Categoria::ICONOS (16 opciones) + iconoResuelto().
+  [x] StoreCategoriaRequest valida 'icono' con Rule::in(ICONOS).
+  [x] CategoriaController@store guarda 'icono'.
+  [x] <x-categoria-icono> acepta prop :icono.
+  [x] Vista categorias/index con selector visual en crear y editar.
+  [x] Admin: store/update validan y guardan 'icono'.
+  [x] Vista admin/categorias con selector.
 
 HECHO (Ocultar ingreso mensual al admin, 2026-10-20):
-  [x] UpdatePerfilRequest:
-      · prepareForValidation: si es admin, borra 'ingreso_mensual' del request
-        (por si alguien manipula el HTML).
-      · rules(): regla 'prohibitedIf(rol===administrador)' en 'ingreso_mensual'.
-      · mensaje 'ingreso_mensual.prohibited' → "El administrador no tiene ingreso
-        mensual.".
-  [x] AjustesController@actualizarPerfil: si es admin, no asigna
-      'ingreso_mensual'. El valor de BD se conserva.
-  [x] perfil.blade.php: campo "Ingreso mensual" envuelto en @if(!$esAdmin).
-      Variable $esAdmin calculada con @php($esAdmin = $usuario->rol ===
-      'administrador') al inicio de la vista.
+  [x] UpdatePerfilRequest: prepareForValidation borra ingreso_mensual si admin.
+  [x] rules(): prohibitedIf en ingreso_mensual.
+  [x] AjustesController@actualizarPerfil: no asigna ingreso_mensual si admin.
+  [x] perfil.blade.php: campo envuelto en @if(!$esAdmin).
   [x] tests: 204 passed (776-777 assertions).
 
-HECHO (Dashboard del administrador + fix del header, 2026-10-21):   [HECHO 2026-10-21]
-  [x] routes/modulos/admin.php: GET /admin/panel -> admin.panel
-      (PanelController@index). Primera ruta del Grupo E.
-  [x] app/Http/Controllers/Admin/PanelController.php (nuevo): KPIs con
-      COUNT y GROUP BY. Sin datos financieros.
-  [x] resources/views/admin/panel.blade.php (nuevo): KPIs, distribución
-      por rol, recordatorios, últimos usuarios, últimas categorías.
+HECHO (Dashboard del administrador + fix del header, 2026-10-21):
+  [x] routes/modulos/admin.php: GET /admin/panel -> admin.panel.
+  [x] app/Http/Controllers/Admin/PanelController.php (nuevo): KPIs con COUNT.
+  [x] resources/views/admin/panel.blade.php (nuevo).
   [x] tests/Feature/Admin/PanelTest.php (nuevo): 5 pruebas.
-  [x] header.blade.php: "Ir a mi panel" apunta a admin.panel si
-      rol=administrador, a panel si estandar|familiar.
-  [x] sidebar-admin.blade.php: ítem "Panel" con route('admin.panel').
-  [x] /admin/estadisticas se mantiene como pantalla de agregados
-      detallados. No se borra.
-  [x] Decisión #60 (ver §14).
+  [x] header.blade.php: "Ir a mi panel" según rol.
+  [x] sidebar-admin.blade.php: ítem "Panel".
+  [x] /admin/estadisticas se mantiene como agregados detallados.
+  [x] Decisión #60.
 
-HECHO (J9 - Seguridad, 2026-10-22):                                 [NUEVO 2026-10-22]
-  [x] Migración 2026_10_22_000000_crear_auditorias_table:
-      tabla auditorias (user_id FK nullOnDelete, accion, modelo, modelo_id,
-      antes JSON, despues JSON, ip, user_agent, timestamps) +
-      índices (user_id, created_at), (modelo, modelo_id), accion.
-  [x] Migración 2026_10_22_000001_agregar_login_ip_a_users_table:
-      columnas last_login_ip (45) y last_login_at (timestamp), nullable.
-  [x] app/Models/Auditoria.php (nuevo): casts JSON, relación user,
-      método estático registrar() (solo INSERT, inmutable).
-  [x] app/Services/Auditoria.php (nuevo): punto único de registro.
-  [x] app/Http/Controllers/Admin/AuditoriaController.php (nuevo): index con
-      filtros por acción, admin, rango de fechas. Solo lectura.
-  [x] resources/views/admin/auditoria.blade.php (nuevo): tabla con chips
-      por tipo de acción. Filtros y paginación.
-  [x] routes/modulos/admin.php: GET /admin/auditoria -> admin.auditoria.
+HECHO (J9 - Seguridad, 2026-10-22):
+  [x] Migración 2026_10_22_000000_crear_auditorias_table.
+  [x] Migración 2026_10_22_000001_agregar_login_ip_a_users_table.
+  [x] app/Models/Auditoria.php.
+  [x] app/Services/Auditoria.php.
+  [x] app/Http/Controllers/Admin/AuditoriaController.php.
+  [x] resources/views/admin/auditoria.blade.php.
+  [x] routes/modulos/admin.php: GET /admin/auditoria.
   [x] sidebar-admin.blade.php: ítem "Auditoría".
-  [x] UsuarioController@cambiarRol: auditoría usuario.rol con antes/despues.
-  [x] UsuarioController@cambiarEstado: auditoría usuario.suspender /
-      usuario.reactivar + notifica account.suspended al usuario.
-  [x] UsuarioController@destroy: auditoría usuario.eliminar con idBorrado
-      capturado antes del delete.
-  [x] CategoriaSistemaController@store: auditoría categoria.crear.
-  [x] CategoriaSistemaController@update: auditoría categoria.actualizar.
-  [x] CategoriaSistemaController@desactivar: auditoría categoria.desactivar /
-      categoria.reactivar (toggle).
-  [x] app/Notifications/AlertaSeguridad.php (nuevo): ShouldQueue.
-      Eventos: password.changed, email.changed, account.suspended,
-      login.new_ip, login.blocked.
-  [x] resources/views/emails/alerta-seguridad.blade.php (nuevo): template
-      con preheader, dark mode, tabla de detalles, nota de seguridad.
-  [x] User: esIpNueva(), registrarLogin(), rutaPanel(), hasTwoFactorEnabled(),
-      generateTwoFactorSecret(), getTwoFactorQrUrl(), verifyTwoFactorCode()
-      (los 4 últimos preparados para 2FA — no se usan aún).
-  [x] LoginController@store: detecta IP nueva + notifica. Si tiene 2FA,
-      desloguea y pide código (rama preparada, no activa).
-  [x] LoginController@showTwoFactorForm / verifyTwoFactor (nuevos, preparados
-      para 2FA — no se usan aún).
+  [x] Auditoría en UsuarioController y CategoriaSistemaController.
+  [x] app/Notifications/AlertaSeguridad.php (ShouldQueue).
+  [x] resources/views/emails/alerta-seguridad.blade.php.
+  [x] User: esIpNueva(), registrarLogin(), rutaPanel() + helpers 2FA (no usados).
+  [x] LoginController: detecta IP nueva + notifica.
   [x] PasswordResetController@actualizar: notifica password.changed.
-  [x] AjustesController@confirmarCorreo: notifica email.changed al correo
-      VIEJO (por si el cambio fue un ataque).
-  [x] LoginRequest: notificarBloqueo() con Cache 1h para no spamear.
-  [x] app/Http/Requests/Admin/EliminarUsuarioRequest.php (nuevo): password
-      current_password.
-  [x] app/Http/Requests/Admin/EliminarCategoriaSistemaRequest.php (nuevo):
-      authorize() valida categoría del sistema + password current_password.
-  [x] UsuarioController@destroy: usa EliminarUsuarioRequest.
-  [x] CategoriaSistemaController@desactivar: usa EliminarCategoriaSistemaRequest,
-      sin abort_unless (movido al authorize()).
-  [x] SecurityHeaders: CSP permisiva (unsafe-inline en script-src/style-src),
-      Google Fonts/Material Symbols autorizados, upgrade-insecure-requests
-      cuando HTTPS, HSTS en producción.
-  [x] routes/modulos/auth.php: throttles inline (registro.guardar,
-      password.email, password.update).
-  [x] routes/modulos/ajustes.php: FIX bug URL duplicada
-      (/ajustes/ajustes/confirmar-correo/reenviar) + throttle 1,1.
-  [x] routes/modulos/admin.php: throttle 30,1 en usuarios.rol.
-  [x] app/Models/Gasto.php: scopeDelPeriodo($anio, $mes) — cierra TODO(J8).
-  [x] DashboardController: usa Gasto::delPeriodo en vez de whereYear/whereMonth.
-  [x] tests/Feature/AuthTest.php: FIX nombre de clase
-      (UsuariosTest -> AuthTest, 35 tests volvieron a ejecutarse) +
-      test_login_regenera_la_sesion + test_login_notifica_ip_nueva +
-      test_login_bloqueado_notifica_al_usuario + test_login_del_administrador_va_a_panel.
-  [x] tests/Feature/Admin/UsuariosTest.php: + use Notification + 3 tests nuevos
-      (suspender notifica, eliminar sin password falla, eliminar con password
-      incorrecta falla). Actualizados test_admin_puede_eliminar_a_otro_usuario.
-  [x] tests/Feature/Admin/CategoriasSistemaTest.php: + 2 tests nuevos
-      (desactivar sin password falla, actualizado desactivar cambia el estado).
-      Actualizado no_se_puede_desactivar_categoria_personal (espera 403 real).
-  [x] tests/Feature/Admin/AuditoriaTest.php (nuevo): 6 pruebas.
-  [x] tests/Feature/AjustesTest.php: reescrito
-      test_confirmar_correo_notifica_al_correo_viejo con código real +
-      assertSentOnDemand.
-  [x] docs/juan/J9_Checklist_Previo.txt: procedimiento de backup completo
-      (creación, restauración mensual, verificación gzip, incidencias).
-  [x] docs/juan/deploy.sh: script con composer audit --no-dev --locked que
-      aborta el deploy si hay vulnerabilidades. Migración, cache, permisos.
-  [x] Verificado con `curl -I` que las cabeceras se aplican correctamente.
-  [x] Tests finales: 209 originales + 5 J9 = ~214 passing (J9 aún no cierra
-      formalmente por bloqueo del composer audit y greps).
+  [x] AjustesController@confirmarCorreo: notifica email.changed al correo VIEJO.
+  [x] LoginRequest: notificarBloqueo() con Cache 1h.
+  [x] Admin/EliminarUsuarioRequest.php.
+  [x] Admin/EliminarCategoriaSistemaRequest.php.
+  [x] SecurityHeaders: CSP permisiva + HSTS.
+  [x] Throttles inline en auth, ajustes, admin.
+  [x] app/Models/Gasto.php: scopeDelPeriodo($anio, $mes).
+  [x] DashboardController usa Gasto::delPeriodo.
+  [x] Tests: AuthTest, Admin/UsuariosTest, Admin/CategoriasSistemaTest,
+      Admin/AuditoriaTest, AjustesTest actualizados.
+  [x] docs/juan/J9_Checklist_Previo.txt + docs/juan/deploy.sh.
+  [x] Tests finales: ~214 passing.
+
+HECHO (Onboarding tour + admin elimina categorías + foto de perfil,
+       2026-10-22 v2):
+
+  ONBOARDING TOUR:
+  [x] public/js/onboarding.js: motor sin dependencias.
+  [x] public/css/onboarding.css: spotlight + tooltip + mobile.
+  [x] resources/views/components/onboarding-tour.blade.php.
+  [x] data-tour="metricas|distribucion|proximos|ultimos|notificaciones|
+      menu-lateral" en app/dashboard.blade.php.
+  [x] data-tour="kpis|distribucion-roles|ultimos-usuarios|ultimas-categorias|
+      sidebar-admin" en admin/panel.blade.php.
+  [x] data-tour="menu-lateral" en components/sidebar.blade.php.
+  [x] data-tour="sidebar-admin" en components/sidebar-admin.blade.php.
+  [x] data-tour="menu-movil" en components/topbar.blade.php.
+  [x] Botón "Ver tour de nuevo" en app/ajustes/perfil.blade.php.
+  [x] Evento cc-tour:finished → revela welcome card del dashboard.
+  [x] Fix: appendChild a <html>, no a <body> (bug position:fixed con
+      body{transform}).
+  [x] Fix: scroll-behavior: auto !important durante scroll al target.
+  [x] Fix: poll de rect estabilizado 5 frames.
+  [x] Fix: animation sin translateY residual.
+  [x] Decisión #68.
+
+  ADMIN ELIMINA CATEGORÍAS:
+  [x] routes/modulos/admin.php: DELETE /admin/categorias/{categoria}
+      → admin.categorias.destroy (throttle:30,1).
+  [x] CategoriaSistemaController@destroy: COUNT gastos + gastos fijos;
+      si > 0 → error "Está en uso"; si = 0 → delete con try/catch
+      QueryException + auditoría categoria.eliminar.
+  [x] admin/categorias.blade.php: botón "Eliminar" + modal con password +
+      bloque de errores global + tooltip si está en uso.
+  [x] Aviso contextual del header actualizado.
+  [x] Decisión #69.
+
+  FOTO DE PERFIL:
+  [x] Migración 2026_10_22_100000_agregar_foto_perfil_a_users_table.
+  [x] User: foto_perfil en $fillable + accessor avatar_url (URL relativa).
+  [x] components/user-avatar.blade.php (fallback a iniciales).
+  [x] UpdatePerfilRequest: reglas foto_perfil + eliminar_foto + mensajes.
+  [x] AjustesController@actualizarPerfil: maneja la subida con
+      Storage::disk('public')->delete/store.
+  [x] ServicioCuentas::eliminarCuenta: borra el archivo del disco antes
+      del delete.
+  [x] app/ajustes/perfil.blade.php: form con enctype multipart, avatar
+      inline, overlay "Cambiar ícono", preview con FileReader, checkbox
+      "Quitar foto actual".
+  [x] components/topbar.blade.php: <x-user-avatar :user :size="36" />.
+  [x] Sección §17 dedicada a almacenamiento dev/prod.
+  [x] Decisión #70.
 
 EN CURSO:
   N5 (Nikol): landing final y páginas legales.
     - En progreso. Reemplaza los Route::view de público.php por vistas completas.
     - Pendiente: validar cifras y promesas (decisión #21).
 
-PENDIENTE J9.2:                                                      [NUEVO 2026-10-22]
+PENDIENTE J9.2:
   [ ] 2FA (TOTP) para usuarios y admin:
-      · Paquetes: pragmarx/google2fa + bacon/bacon-qr-code (no instalados
-        en el entorno local; bloqueo de Composer en Git Bash resuelto a
-        medias — falta verificar `composer audit` y ejecutar `composer require`).
-      · Migración 2026_10_22_000002 (two_factor_secret, two_factor_confirmed_at).
-      · TwoFactorController, rutas, 3 vistas (seguridad, setup, verificar).
-      · Decisión #67. Diseño completo documentado pero no aplicado.
-  [ ] `composer audit` no se pudo correr (Composer no accesible desde
-      Git Bash del entorno local; el comando correcto es
-      `php /c/Users/juane/.config/herd-lite/bin/composer.phar audit`).
-  [ ] Auditoría de logs (`grep "Log::" app/`) no se pudo correr.
-  [ ] Script backup-cuentas-claras.sh no está instalado en servidor (solo
-      documentado el procedimiento en J9_Checklist_Previo.txt).
+      · Paquetes: pragmarx/google2fa + bacon/bacon-qr-code.
+      · Migración 2026_10_22_000002 (two_factor_secret,
+        two_factor_confirmed_at).
+      · TwoFactorController, rutas, 3 vistas.
+      · Decisión #67.
+  [ ] composer audit no se pudo correr (Composer no accesible desde Git Bash
+      del entorno local; el comando correcto es
+      php /c/Users/juane/.config/herd-lite/bin/composer.phar audit).
+  [ ] Auditoría de logs (grep "Log::" app/) no se pudo correr.
+  [ ] Script backup-cuentas-claras.sh no está instalado en servidor.
 
 NO HECHO (fuera de J9):
-  [ ] Registro de acciones del administrador: **CERRADO en J9** (decisión #61).
-  [ ] TODO(J8) en DashboardController: **CERRADO en J9** (delPeriodo).
   [ ] Imágenes de landing (no logo): public/img sigue vacía.
 
 .env DE DESARROLLO: copiar .env.example a .env, php artisan key:generate,
@@ -442,15 +405,14 @@ APP_ENV=local, APP_DEBUG=true, APP_LOCALE=es, DB_CONNECTION=sqlite,
 SESSION_DRIVER=database, SESSION_LIFETIME=480, CACHE_STORE=database,
 QUEUE_CONNECTION=database, MAIL_MAILER=log, AUTH_PASSWORD_RESET_EXPIRE=30.
 Primera vez: php artisan migrate:fresh --seed.
+Además: php artisan storage:link (necesario para foto de perfil y adjuntos).
 
-ENTORNO LOCAL (2026-10-22):                                          [NUEVO 2026-10-22]
+ENTORNO LOCAL (2026-10-22):
   · PHP 8.4.0 vía Laravel Herd en /c/Users/juane/.config/herd-lite/bin/php.
   · Composer vía Herd en /c/Users/juane/.config/herd-lite/bin/composer.phar.
   · Comando correcto desde Git Bash:
       php /c/Users/juane/.config/herd-lite/bin/composer.phar <subcomando>
-  · NO usar C:\xampp\php\php.exe (PHP 8.2, incompatible con composer.lock que
-    requiere >= 8.4).
-
+  · NO usar C:\xampp\php\php.exe (PHP 8.2, incompatible con composer.lock).
 
 ----------------------------------------------------------------------
 3. STACK Y CONFIGURACIÓN
@@ -458,9 +420,11 @@ ENTORNO LOCAL (2026-10-22):                                          [NUEVO 2026
   Backend ........ PHP 8.4 + Laravel 11/12 (bootstrap/app.php).
   Vistas ......... Blade. Sin Vite ni Tailwind compilado.
   Estilos ........ public/css/style.css · theme.css · transiciones.css ·
-                   menu-usuario.css + un CSS por pantalla.
+                   menu-usuario.css + un CSS por pantalla
+                   (+ onboarding.css para el tour).
   Scripts ........ shell.js · theme.js · transiciones.js ·
-                   simulador-de-creditos.js · crear-usuario.js.
+                   simulador-de-creditos.js · crear-usuario.js
+                   (+ onboarding.js para el tour).
   Fuentes/íconos . Plus Jakarta Sans (display=swap) + Material Symbols
                    (display=block) + SVGs inline (logo, iconos de categoría,
                    botones con icono).
@@ -478,9 +442,9 @@ ENTORNO LOCAL (2026-10-22):                                          [NUEVO 2026
   Vencimientos ... AUTH_PASSWORD_RESET_EXPIRE=30 (minutos).
                    users.pending_email_expires_at = 1 hora.
   Entorno local .. php artisan serve (http://localhost:8000).
-                   PHP 8.4.0 vía Laravel Herd.                       [NUEVO 2026-10-22]
+                   PHP 8.4.0 vía Laravel Herd.
 
-DEPENDENCIAS COMPOSER (2026-10-22):                                  [NUEVO 2026-10-22]
+DEPENDENCIAS COMPOSER (2026-10-22):
   Actuales (producción):
     · laravel/framework
     · laravel/tinker
@@ -488,9 +452,10 @@ DEPENDENCIAS COMPOSER (2026-10-22):                                  [NUEVO 2026
   Pendientes de instalar (2FA, decisión #67):
     · pragmarx/google2fa
     · bacon/bacon-qr-code
-    Nota: `composer require` falló en el entorno local. Ver §2 PENDIENTE J9.2.
+  Para producción con S3/R2 (foto de perfil, adjuntos, decisión #70):
+    · league/flysystem-aws-s3-v3 (compatible con S3 y R2)
 
-CABECERAS HTTP DE SEGURIDAD (2026-10-22):                            [NUEVO 2026-10-22]
+CABECERAS HTTP DE SEGURIDAD (2026-10-22):
   Middleware App\Http\Middleware\SecurityHeaders (registrado en
   bootstrap/app.php). Aplica:
     · X-Frame-Options: DENY
@@ -506,7 +471,25 @@ CABECERAS HTTP DE SEGURIDAD (2026-10-22):                            [NUEVO 2026
       object-src 'none' [+ upgrade-insecure-requests si HTTPS]
     · Strict-Transport-Security: max-age=31536000; includeSubDomains
       (solo producción + HTTPS)
+  Nota: img-src 'self' data: https: cubre /storage/... (relativa, 'self'),
+  data: URIs y cualquier HTTPS (S3/R2/CDN). No requiere cambios al migrar a
+  producción.
 
+ALMACENAMIENTO DE ARCHIVOS (avatares, adjuntos futuros):
+  Disk Laravel .... 'public' (config/filesystems.php).
+  Ruta física ..... storage/app/public/avatares/ (por defecto).
+  URL pública ..... /storage/avatares/xxx.jpg (symlink en dev).
+  Setup dev ....... php artisan storage:link.
+                    Windows: si falla, mklink /J public\storage
+                    storage\app\public.
+  Configuración ... APP_URL debe coincidir con el host que se usa en el
+                    navegador (localhost o 127.0.0.1). El accessor
+                    avatar_url devuelve URL RELATIVA para evitar CSP + host
+                    mismatch.
+  Producción ...... Ver §17. Opciones: (a) symlink local en VPS, (b) S3/R2
+                    con league/flysystem-aws-s3-v3. El código del controller
+                    NO cambia (usa Storage::disk('public') como abstracción).
+  CSP ............. img-src 'self' data: https: ya cubre S3/R2 vía HTTPS.
 
 ----------------------------------------------------------------------
 4. ROLES (3) Y QUÉ PUEDE HACER CADA UNO
@@ -515,12 +498,13 @@ CABECERAS HTTP DE SEGURIDAD (2026-10-22):                            [NUEVO 2026
                     categorías (con ícono elegible), gastos fijos,
                     notificaciones, simulador, informes, panel, ajustes
                     (perfil con ingreso mensual, tipo-cuenta, eliminar cuenta,
-                    cambio de correo) y METAS INDIVIDUALES. NO entra a
-                    administración.
+                    cambio de correo, FOTO DE PERFIL) y METAS INDIVIDUALES.
+                    NO entra a administración.
   familiar ........ todo lo del estándar + metas COMPARTIDAS y puede ACEPTAR
                     invitaciones a metas compartidas.
   administrador ... SOLO administración. En Ajustes, únicamente `perfil`
-                    (nombre, correo, contraseña) y `confirmar-correo`.
+                    (nombre, correo, contraseña, FOTO DE PERFIL) y
+                    `confirmar-correo`.
                     NO tiene ingreso mensual: el campo no se muestra y la regla
                     prohibitedIf lo rechaza si llega por POST.
                     NO puede cambiar tipo de cuenta ni eliminar su cuenta desde
@@ -529,9 +513,11 @@ CABECERAS HTTP DE SEGURIDAD (2026-10-22):                            [NUEVO 2026
                     Recibe 403 en gastos, créditos, metas, informes y panel.
                     Puede elegir el ícono de cada categoría del sistema desde
                     /admin/categorias.
+                    Puede ELIMINAR categorías del sistema SOLO si no tienen
+                    gastos ni gastos fijos (COUNT = 0). Requiere re-auth.
+                    Puede cambiar su FOTO DE PERFIL como cualquier usuario.
                     Accede a /admin/panel (dashboard), /admin/usuarios,
                     /admin/categorias, /admin/estadisticas y /admin/auditoria.
-                                                                     [ACTUALIZADO 2026-10-22]
 Estado de cuenta: users.activo (booleano).
 "rol" y "activo" NO son asignables en masa.
 Ocultar un enlace del menú NO protege: middleware + Policies.
@@ -551,14 +537,14 @@ Efecto visual del rol:
   Los iconos de categoría usan colores por BLOQUE 50/30/20, no por rol:
   necesidades (--need, azul), discrecionales (--want, morado), ahorro (--save, verde).
 
-RE-AUTENTICACIÓN (2026-10-22):                                       [NUEVO 2026-10-22]
+RE-AUTENTICACIÓN:
   El admin debe ingresar su contraseña actual para:
     · Eliminar un usuario (EliminarUsuarioRequest).
     · Activar / desactivar una categoría del sistema
       (EliminarCategoriaSistemaRequest).
+    · Eliminar una categoría del sistema (EliminarCategoriaSistemaRequest).
   Motivo: si el admin deja la sesión abierta, un tercero no puede ejecutar
   acciones destructivas sin conocer la contraseña.
-
 
 ----------------------------------------------------------------------
 5. ESTRUCTURA DE CARPETAS
@@ -575,21 +561,19 @@ RE-AUTENTICACIÓN (2026-10-22):                                       [NUEVO 202
                                CategoriaController,
                                Admin/{PanelController, UsuarioController,
                                CategoriaSistemaController, EstadisticaController,
-                               AuditoriaController}                [ACTUALIZADO 2026-10-22]
+                               AuditoriaController}
     Http/Middleware/ ......... (R) CuentaActiva, RolRequerido,
                                ExpirarSesionPorInactividad, SecurityHeaders.
-                                                                     [ACTUALIZADO 2026-10-22]
     Http/Requests/ ........... (R) Auth/*, Metas/*, Admin/*, Categorias/*,
                                UpdatePerfilRequest,
                                Admin/EliminarUsuarioRequest,
                                Admin/EliminarCategoriaSistemaRequest.
-                                                                     [ACTUALIZADO 2026-10-22]
     Notifications/ ........... (R) RestablecerContrasena, ConfirmarCambioCorreo,
-                               AlertaSeguridad.                      [NUEVO 2026-10-22]
+                               AlertaSeguridad.
     Models/ .................. (R) User, Categoria, Gasto, GastoFijo, PagoGastoFijo,
                                SimulacionCredito, Informe, DetalleInforme, Meta,
                                ParticipacionMeta, AporteMeta, Notificacion,
-                               Auditoria.                            [NUEVO 2026-10-22]
+                               Auditoria.
     Policies/ ................ (R) PoliticaDeDueno (base), GastoPolicy, GastoFijoPolicy,
                                SimulacionCreditoPolicy, NotificacionPolicy,
                                InformePolicy, CategoriaPolicy, MetaPolicy,
@@ -598,18 +582,17 @@ RE-AUTENTICACIÓN (2026-10-22):                                       [NUEVO 202
     Providers/AppServiceProvider.php ... (R) View Composer $notificacionesPendientes
     Services/ ................ (R) CalculadoraCredito, ServicioMetas, ServicioCuentas,
                                ServicioGastosFijos, ServicioNotificaciones,
-                               GeneradorInforme, Auditoria.          [NUEVO 2026-10-22]
+                               GeneradorInforme, Auditoria.
     Console/ ................. (R) Commands/GenerarAlertasGastosFijos.php
   bootstrap/app.php .......... (R) alias 'cuenta.activa', 'rol', 'sesion.inactividad'.
                                SecurityHeaders::class appended a todos los requests.
                                redirectUsersTo → admin.panel si admin, panel si no.
-                                                                     [ACTUALIZADO 2026-10-22]
   database/migrations|seeders|factories ... (R) J2 + migración #23 de J7 +
                                migraciones 2026_10_17_100000, 2026_10_17_120000 +
                                migración 2026_10_20_155857 (categorias.icono) +
                                migración 2026_10_22_000000_crear_auditorias_table +
-                               migración 2026_10_22_000001_agregar_login_ip_a_users_table.
-                                                                     [ACTUALIZADO 2026-10-22]
+                               migración 2026_10_22_000001_agregar_login_ip_a_users_table +
+                               migración 2026_10_22_100000_agregar_foto_perfil_a_users_table.
                                (PENDIENTE J9.2: migración 2026_10_22_000002
                                 con two_factor_secret y two_factor_confirmed_at).
   routes/
@@ -624,10 +607,11 @@ RE-AUTENTICACIÓN (2026-10-22):                                       [NUEVO 202
     errors/ .................. (R) 403.blade.php, 404.blade.php (personalizadas).
     layouts/ ................. (R) base, publico, app, admin
     components/ .............. (R) header, footer, sidebar, sidebar-admin, topbar,
-                               toast, logo, categoria-icono.
+                               toast, logo, categoria-icono, user-avatar,
+                               onboarding-tour.
     emails/ .................. (R) confirmar-cambio-correo.blade.php,
                                restablecer-contrasena.blade.php,
-                               alerta-seguridad.blade.php.           [NUEVO 2026-10-22]
+                               alerta-seguridad.blade.php.
     publico/ ................. (R) landing, crear-usuario, iniciar-sesion,
                                recuperar-contrasena, restablecer-contrasena,
                                politica-de-privacidad, terminos-y-condiciones.
@@ -637,15 +621,19 @@ RE-AUTENTICACIÓN (2026-10-22):                                       [NUEVO 202
                                ajustes/. (PENDIENTE J9.2: ajustes/seguridad.blade.php
                                y ajustes/seguridad-2fa-setup.blade.php).
     admin/ ................... (R) panel, usuarios, categorias, estadisticas,
-                               auditoria.                            [NUEVO 2026-10-22]
+                               auditoria.
   public/css ................. (R) style.css, theme.css, transiciones.css,
-                               menu-usuario.css + un CSS por pantalla
+                               menu-usuario.css, onboarding.css + un CSS por
+                               pantalla.
   public/js .................. (R) shell.js, theme.js, transiciones.js,
-                               simulador-de-creditos.js, crear-usuario.js
+                               simulador-de-creditos.js, crear-usuario.js,
+                               onboarding.js.
   public/img ................. (F) vacía; el logo ya no es una imagen (es SVG).
+  public/storage/ ............ (R) symlink → storage/app/public. No versionado.
+                               Creado con `php artisan storage:link`.
+  storage/app/public/avatares (R) fotos de perfil. No versionado.
   docs/backend/ .............. SOLO documentación.
-  docs/juan/ ................. (R) J9_Checklist_Previo.txt (con procedimiento
-                               de backup completo), deploy.sh.       [NUEVO 2026-10-22]
+  docs/juan/ ................. (R) J9_Checklist_Previo.txt, deploy.sh.
   tests/ ..................... (R) tests/Feature/{BaseDeDatosTest, AuthTest,
                                PermisosTest, AislamientoTest, MetasTest, AjustesTest,
                                CalculadoraCreditoTest, GastosFijosTest, InformesTest,
@@ -653,18 +641,16 @@ RE-AUTENTICACIÓN (2026-10-22):                                       [NUEVO 202
                                DashboardTest, NotificacionesTest}
                                tests/Feature/Admin/{PanelTest, UsuariosTest,
                                CategoriasSistemaTest, EstadisticasTest, AuditoriaTest}
-                                                                     [ACTUALIZADO 2026-10-22]
   README.md .................. (R) raíz.
   DECISIONES.md .............. (R) raíz.
 
 ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
-  public/css/{style,theme,transiciones,menu-usuario}.css ·
-  public/js/{shell,theme,transiciones}.js ·
+  public/css/{style,theme,transiciones,menu-usuario,onboarding}.css ·
+  public/js/{shell,theme,transiciones,onboarding}.js ·
   resources/views/layouts/* · resources/views/components/* ·
   resources/views/errors/* · resources/views/emails/* ·
   routes/web.php · routes/console.php · database/migrations/* ·
-  config/auth.php · .env.example
-
+  config/auth.php · config/filesystems.php · .env.example
 
 ----------------------------------------------------------------------
 6. PANTALLAS: VISTA, CSS Y DUEÑO
@@ -674,7 +660,7 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   errors/404                              — (theme.css bloque 9)               Juan (2026-10-19)
   emails/confirmar-cambio-correo          —                                    Juan (V4)
   emails/restablecer-contrasena           —                                    Juan (J3)
-  emails/alerta-seguridad                 —                                    Juan (2026-10-22) [NUEVO]
+  emails/alerta-seguridad                 —                                    Juan (2026-10-22)
   publico/landing                         landing-page                         Nikol N5
   publico/politica-de-privacidad          politica-de-privacidad               Nikol N5
   publico/terminos-y-condiciones          terminos-y-condiciones               Nikol N5
@@ -682,7 +668,8 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   publico/crear-usuario (+crear-usuario.js) crear-usuario                      Juan J3
   publico/recuperar-contrasena            recuperar-contrasena                 Juan J3
   publico/restablecer-contrasena          restablecer-contrasena               Juan J3
-  app/dashboard                           dashboard-principal                  Juan J8
+  app/dashboard (+onboarding-tour)        dashboard-principal                  Juan J8
+                                          + onboarding.css                     (2026-10-22 v2)
   app/gastos/index                        gastos                               Nikol N1
   app/categorias/index                    categorias                           Nikol N2
   app/gastos-fijos/index                  gastos-fijos                         Nikol N3
@@ -691,42 +678,48 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   app/creditos/historial                  historial-simulaciones               Valeria V2
   app/informes/actual                     informes-50-30-20                    Valeria V3
   app/informes/historial                  informes-historial                   Valeria V3
-  app/ajustes/{perfil,tipo-cuenta,eliminar-cuenta,_tabs}  ajustes             Valeria V4
+  app/ajustes/perfil (+onboarding-tour)   ajustes                              Valeria V4
+                                          + onboarding.css                     (2026-10-22 v2)
+  app/ajustes/{tipo-cuenta,eliminar-cuenta,_tabs}  ajustes                     Valeria V4
   app/metas/index                         metas-compartidas                    Juan J5
   app/metas/invitaciones                  invitaciones-metas                   Juan J5
   app/metas/show                          detalle-meta                         Juan J5
-  admin/panel                             admin-estadisticas (reutilizable)    Juan (2026-10-21)
+  admin/panel (+onboarding-tour)          admin-estadisticas (reutilizable)    Juan (2026-10-21)
+                                          + onboarding.css                     (2026-10-22 v2)
   admin/usuarios                          admin-usuarios                       Juan J7
   admin/categorias                        admin-categorias                     Juan J7
+                                          (+botón Eliminar)                    (2026-10-22 v2)
   admin/estadisticas                      admin-estadisticas                   Juan J7
-  admin/auditoria                         admin-usuarios (reutilizable)        Juan (2026-10-22) [NUEVO]
+  admin/auditoria                         admin-usuarios (reutilizable)        Juan (2026-10-22)
 
 Componentes compartidos:
   header.blade.php ................. header público + <x-logo />.
-  topbar.blade.php ................. barra superior con .topbar-acciones.
-  sidebar.blade.php ................ menú lateral privado + <x-logo />.
+  topbar.blade.php ................. barra superior con .topbar-acciones,
+                                     avatar <x-user-avatar>, botón hamburguesa
+                                     (data-tour="menu-movil").
+  sidebar.blade.php ................ menú lateral privado + <x-logo /> +
+                                     data-tour="menu-lateral".
   sidebar-admin.blade.php .......... menú lateral de administración + <x-logo />
                                      + ítems Panel, Usuarios, Categorías,
-                                     Estadísticas, Auditoría.       [ACTUALIZADO 2026-10-22]
+                                     Estadísticas, Auditoría +
+                                     data-tour="sidebar-admin".
   toast.blade.php .................. mensajes flash "exito".
   logo.blade.php ................... SVG del logo, adapta a tema y rol.
-  categoria-icono.blade.php ........ SVG por categoría. Acepta :categoria, o
-                                     :nombre + :bloque, o :icono explícito.
-                                     Prioridad: prop → BD → nombre → bloque.
-
+  categoria-icono.blade.php ........ SVG por categoría.
+  user-avatar.blade.php ............ Avatar circular con foto o fallback a
+                                     iniciales. [NUEVO 2026-10-22 v2]
+  onboarding-tour.blade.php ........ Componente del tour. Carga CSS/JS y
+                                     opcionalmente autoarranca. [NUEVO]
 
 ----------------------------------------------------------------------
 7. RUTAS: URL Y NOMBRES DEFINITIVOS, NO SE CAMBIAN
 ----------------------------------------------------------------------
 Fuente de verdad: docs/backend/00-rutas.php.
-Conteo real (2026-10-22): 11 (A) + 9 (B) + 37 (C) + 0 (D eliminado) + 11 (E) = 68 rutas
-+ Route::fallback() (sin nombre, no cuenta como ruta normal) = 69 líneas mostradas
-por `php artisan route:list --except-vendor`.
+Conteo real (2026-10-22 v2): 11 (A) + 9 (B) + 37 (C) + 0 (D) + 12 (E) = 69 rutas
++ Route::fallback() (sin nombre) = 70 mostradas por
+`php artisan route:list --except-vendor`.
 Middleware del bloque privado: ['sesion.inactividad', 'auth', 'cuenta.activa'].
 Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
-
-Todas las rutas del Grupo C tienen controlador real. Solo quedan como Route::view
-las de público.php (landing, política, términos) que son estáticas por diseño.
 
   GRUPO A  PUBLICAS .............. sin sesion (login/registro/recuperar con 'guest')
   ----------------------------------------------------------------------------------------------------------------------
@@ -743,7 +736,6 @@ las de público.php (landing, política, términos) que son estáticas por dise�
   POST   /restablecer-contrasena                          password.update                (throttle:5,1)
 
   GRUPO B  CON SESION ............ sesion.inactividad + auth + cuenta.activa
-                                   (cualquier rol)
   ----------------------------------------------------------------------------------------------------------------------
   POST   /cerrar-sesion                                   logout
   GET    /ajustes/perfil                                  ajustes.perfil                 (HECHO - V4)
@@ -766,7 +758,7 @@ las de público.php (landing, política, términos) que son estáticas por dise�
   POST   /gastos                                          gastos.store                   (HECHO)
   PUT    /gastos/{gasto}                                  gastos.update                  (HECHO)
   DELETE /gastos/{gasto}                                  gastos.destroy                 (HECHO)
-  GET    /gastos/{gasto}/editar                           gastos.edit                    (HECHO - N1) [DOC 2026-10-22]
+  GET    /gastos/{gasto}/editar                           gastos.edit                    (HECHO - N1)
   GET    /categorias                                      categorias.index               (HECHO)
   POST   /categorias                                      categorias.store               (HECHO)
   PUT    /categorias/{categoria}                          categorias.update              (HECHO)
@@ -778,7 +770,7 @@ las de público.php (landing, política, términos) que son estáticas por dise�
   POST   /gastos-fijos/{gastoFijo}/pagar                  gastos-fijos.pagar             (HECHO)
   GET    /notificaciones                                  notificaciones.index           (HECHO)
   POST   /notificaciones/leer                             notificaciones.leer            (HECHO)
-  POST   /notificaciones/leer-todas                       notificaciones.leerTodas       (HECHO - N4) [DOC 2026-10-22]
+  POST   /notificaciones/leer-todas                       notificaciones.leerTodas       (HECHO - N4)
   GET    /creditos/simulador                              creditos.simulador             (HECHO)
   POST   /creditos                                        creditos.guardar               (HECHO)
   GET    /creditos/historial                              creditos.historial             (HECHO)
@@ -798,9 +790,6 @@ las de público.php (landing, política, términos) que son estáticas por dise�
   POST   /metas/{meta}/finalizar                          metas.finalizar                (HECHO)
   POST   /metas/{meta}/abandonar                          metas.abandonar                (HECHO)
 
-  GRUPO D  SOLO FAMILIAR ......... *** ELIMINADO el 2026-10-08 ***
-  Las 10 rutas de metas pasaron al GRUPO C.
-
   GRUPO E  SOLO ADMINISTRADOR .... auth + cuenta.activa + rol:administrador ; prefijo /admin
   ----------------------------------------------------------------------------------------------------------------------
   GET    /admin/panel                                     admin.panel                    (HECHO - 2026-10-21)
@@ -812,13 +801,14 @@ las de público.php (landing, política, términos) que son estáticas por dise�
   POST   /admin/categorias                                admin.categorias.store         (HECHO - J7)
   PUT    /admin/categorias/{categoria}                    admin.categorias.update        (HECHO - J7)
   PATCH  /admin/categorias/{categoria}/desactivar         admin.categorias.desactivar    (HECHO - J7) (reauth: password)
+  DELETE /admin/categorias/{categoria}                    admin.categorias.destroy       (HECHO - 2026-10-22 v2)
+                                                                                          (throttle:30,1) (reauth: password) [NUEVO]
   GET    /admin/estadisticas                              admin.estadisticas             (HECHO - J7)
-  GET    /admin/auditoria                                 admin.auditoria                (HECHO - 2026-10-22) [NUEVO]
+  GET    /admin/auditoria                                 admin.auditoria                (HECHO - 2026-10-22)
 
   FALLBACK ....................... sin middleware (web)
   ----------------------------------------------------------------------------------------------------------------------
   *      /{cualquier url}                                 (sin nombre)           -> errors.404
-
 
 ----------------------------------------------------------------------
 8. CÓMO PASAR UNA RUTA DE MAQUETA A REAL
@@ -829,7 +819,6 @@ las de público.php (landing, política, términos) que son estáticas por dise�
   en un servicio, autoriza con Policy ANTES de leer o modificar, y devuelve la
   vista o una redirección con ->with('exito', 'mensaje exacto'). Quitar el aviso
   "MAQUETA".
-
 
 ----------------------------------------------------------------------
 9. MODELO DE DATOS
@@ -843,19 +832,24 @@ porcentajes del informe. Nombres en español salvo users.
                           ingreso_mensual (nullable, entero) — SOLO para estandar y
                           familiar; el admin no lo tiene,
                           consentimiento_datos_at (nullable),
+                          foto_perfil (string 255, nullable),
                           pending_email (nullable), email_token (nullable, índice),
                           pending_email_expires_at (nullable, timestamp),
                           remember_token,
-                          last_login_ip (string 45, nullable),             [NUEVO 2026-10-22]
-                          last_login_at (timestamp, nullable),             [NUEVO 2026-10-22]
+                          last_login_ip (string 45, nullable),
+                          last_login_at (timestamp, nullable),
                           timestamps
                           · email_token guarda SHA-256 del token.
                           · pending_email_expires_at = 1 hora.
                           · last_login_ip / last_login_at se asignan con forceFill
                             desde User::registrarLogin(); NO son fillable.
+                          · foto_perfil guarda la ruta RELATIVA dentro del disk
+                            'public' (ej. "avatares/abc123.jpg"). El archivo
+                            vive en storage/app/public/avatares/ (dev) o en el
+                            bucket S3/R2 (prod). NUNCA se guarda la imagen en
+                            la BD (ver §17).
                           · PENDIENTE J9.2: two_factor_secret (text, nullable),
                             two_factor_confirmed_at (timestamp, nullable).
-                                                                           [PENDIENTE 2FA]
   categorias ............ id, user_id (NULL = del sistema), nombre (50),
                           bloque (necesidades|discrecionales|ahorro),
                           peso_recomendado (nullable, entero),
@@ -884,46 +878,48 @@ porcentajes del informe. Nombres en español salvo users.
   notificaciones ........ id, user_id, tipo, mensaje, estado, pago_gasto_fijo_id,
                           meta_id, clave_unica
                           · único (user_id, clave_unica)
-  auditorias ............ id, user_id (FK nullOnDelete), accion (50),  [NUEVO 2026-10-22]
+  auditorias ............ id, user_id (FK nullOnDelete), accion (50),
                           modelo (50, nullable), modelo_id (nullable),
                           antes (json, nullable), despues (json, nullable),
                           ip (45, nullable), user_agent (500, nullable),
                           timestamps
                           · índices: (user_id, created_at), (modelo, modelo_id), accion
-                          · Solo INSERT. Inmutable. `user_id` es nullable por si
-                            se elimina el admin que hizo la acción.
-                          · `modelo_id` sin FK: histórico sobrevive al borrado.
+                          · Solo INSERT. Inmutable. user_id nullable por si se
+                            elimina el admin que hizo la acción.
+                          · modelo_id sin FK: histórico sobrevive al borrado.
 
 Tipos de notificación: por_vencer, vencido, invitacion_meta,
 invitacion_meta_requiere_familiar, respuesta_meta, meta_finalizada, meta_abandonada.
 
 Eventos de AlertaSeguridad: password.changed, email.changed,
-account.suspended, login.new_ip, login.blocked.                  [NUEVO 2026-10-22]
-
-ELIMINADAS del diagrama original: "saldo" (#14) y "cuota_credito" (#4).
+account.suspended, login.new_ip, login.blocked.
 
 Ayudas útiles: Categoria::BLOQUES, Categoria::ICONOS, Categoria::activas(),
   Categoria::esDelSistema(), Categoria::iconoResuelto(),
-  Gasto::delUsuario($id), Gasto::delPeriodo($anio, $mes),  [NUEVO 2026-10-22]
+  Gasto::delUsuario($id), Gasto::delPeriodo($anio, $mes),
   Meta::totalConjunto(),
   Meta::aportesDelUsuario($id, $desde, $hasta),
   Categoria::gastosFijos(),
   Auditoria::registrar($accion, $modelo, $modeloId, $antes, $despues),
-                                                             [NUEVO 2026-10-22]
-  User::esIpNueva($ip), User::registrarLogin($ip, $ua), User::rutaPanel().
-                                                             [NUEVO 2026-10-22]
+  User::esIpNueva($ip), User::registrarLogin($ip, $ua), User::rutaPanel(),
+  User::avatar_url (accessor).
 Alcance "del usuario actual": Modelo::delUsuario(auth()->id()) en listados y
   totales; para un registro puntual, $this->authorize('view|update|delete',
   $registro).
 El modelo Gasto tiene casts: fecha => date, monto => integer.
 El modelo User tiene casts: pending_email_expires_at => datetime,
-  last_login_at => datetime.                                 [NUEVO 2026-10-22]
+  last_login_at => datetime.
 El modelo Auditoria tiene casts: antes => array, despues => array.
-                                                             [NUEVO 2026-10-22]
 pending_email, email_token, pending_email_expires_at, last_login_ip y
-two_factor_secret están en $hidden y NO en $fillable.        [ACTUALIZADO 2026-10-22]
+two_factor_secret están en $hidden y NO en $fillable.
+foto_perfil SÍ está en $fillable (se asigna desde el controller validado).
 
-Regla #23: las categorías del sistema se desactivan (activa=false), no se borran.
+Regla #23 (ACTUALIZADA 2026-10-22 v2):
+  - Categorías del sistema se desactivan.
+  - SOLO se eliminan si no tienen gastos NI gastos fijos (COUNT = 0).
+  - Si tienen referencias: bloqueo + mensaje "Está en uso (...)".
+  - La eliminación requiere re-auth (current_password) y se audita como
+    categoria.eliminar.
 
 Semillas:
   CategoriaSeeder ..... 14 categorías del sistema con activa=true (siempre).
@@ -936,29 +932,26 @@ Fábricas: UserFactory con familiar(), administrador(), inactivo(), sinIngreso()
 Caso de referencia del simulador: $10.000.000, 1,5 % mensual, 24 meses
   => cuota $499.241, total $11.981.784, intereses $1.981.784.
 
-
 ----------------------------------------------------------------------
-10. SERVICIOS Y CONTRATOS ENTRE MÓDULOS (C1-C18)
+10. SERVICIOS Y CONTRATOS ENTRE MÓDULOS (C1-C19)
 ----------------------------------------------------------------------
-  C1  Consulta de gastos por periodo ... Nikol (N1, HECHO) -> Valeria y Juan.
-      Gasto::delPeriodo($anio, $mes) implementado. Cierra el TODO(J8) pendiente.
-      [CERRADO 2026-10-22: DashboardController lo usa]
-  C2  Bloque 50/30/20 de cada categoría  Nikol (N2) + Juan (J2) -> Valeria.
-  C3  Ingreso mensual del usuario ...... Valeria (V4, HECHO) -> Valeria y Juan.
-      Servicio: AjustesController@actualizarPerfil. El admin no lo tiene.
-  C4  Servicio de notificaciones ....... Juan (J6, HECHO) -> Nikol y la campana.
+  C1  Consulta de gastos por periodo ... Nikol (N1, HECHO).
+      Gasto::delPeriodo($anio, $mes). DashboardController lo usa.
+  C2  Bloque 50/30/20 de cada categoría  Nikol (N2) + Juan (J2).
+  C3  Ingreso mensual del usuario ...... Valeria (V4, HECHO).
+      AjustesController@actualizarPerfil. El admin no lo tiene.
+  C4  Servicio de notificaciones ....... Juan (J6, HECHO).
       App\Services\ServicioNotificaciones.
       Métodos: crear, contarPendientes, cancelarPorPago, cancelarPorGastoFijo,
       marcarLeida, marcarTodasLeidas. Constantes TIPO_* y ESTADO_*.
-      Comando diario: alertas:gastos-fijos.
-  C5  Pagos del periodo de gastos fijos  Nikol (N3, HECHO) -> Juan (comando diario).
+  C5  Pagos del periodo de gastos fijos  Nikol (N3, HECHO).
       ServicioGastosFijos::generarPagosDelPeriodo, marcarVencidos,
       pendientesDelPeriodo, proximosAVencer, vencidos, estaPagado, marcarPagado.
-  C6  "Tiene metas activas" ............ Juan (J5, HECHO) -> Valeria.
+  C6  "Tiene metas activas" ............ Juan (J5, HECHO).
       ServicioMetas::tieneMetasActivas($usuario),
       tieneMetasCompartidasActivas($usuario),
       Meta::aportesDelUsuario($id, $desde, $hasta).
-  C7  Cambiar tipo de cuenta, eliminar  Juan (J8a + J7 + V4, HECHO) -> Valeria.
+  C7  Cambiar tipo de cuenta, eliminar  Juan (J8a + J7 + V4, HECHO).
       ServicioCuentas::cambiarTipo / eliminarCuenta / cambiarRol / suspender /
       reactivar / solicitarCambioCorreo / reenviarConfirmacionCorreo /
       confirmarCambioCorreo.
@@ -973,33 +966,31 @@ Caso de referencia del simulador: $10.000.000, 1,5 % mensual, 24 meses
   C14 Comando diario de alertas ......... Juan (J6, HECHO). Idempotente.
   C15 Logo adaptativo y favicon ......... Juan.
   C16 Correos de marca ................... Juan.
-  C17 Iconografía por categoría ......... Juan/Nikol (2026-10-19/20). Componente
-      <x-categoria-icono :categoria="$c" :size="20" />. Acepta también :icono
-      explícito. Mapea nombre → SVG; fallback por bloque. Colores por --need /
-      --want / --save. Catálogo en Categoria::ICONOS. El usuario y el admin
-      pueden elegir ícono; se guarda en categorias.icono.
-  C18 Auditoría de acciones del admin ... Juan (2026-10-22, HECHO).      [NUEVO]
+  C17 Iconografía por categoría ......... Juan/Nikol (2026-10-19/20).
+      <x-categoria-icono :categoria />. Mapea nombre → SVG; fallback por bloque.
+      Colores por --need / --want / --save. Catálogo Categoria::ICONOS.
+  C18 Auditoría de acciones del admin ... Juan (2026-10-22, HECHO).
       App\Services\Auditoria::registrar($accion, $modelo, $modeloId, $antes, $despues).
       Eventos: usuario.rol, usuario.suspender, usuario.reactivar,
       usuario.eliminar, categoria.crear, categoria.actualizar,
-      categoria.desactivar, categoria.reactivar.
+      categoria.desactivar, categoria.reactivar, categoria.eliminar.
       NUNCA dentro de un loop: cada cambio genera 1 registro.
       Solo INSERT, la tabla es inmutable.
-  C19 Notificaciones de seguridad ....... Juan (2026-10-22, HECHO).      [NUEVO]
+  C19 Notificaciones de seguridad ....... Juan (2026-10-22, HECHO).
       App\Notifications\AlertaSeguridad (ShouldQueue).
       Eventos: password.changed, email.changed, account.suspended,
       login.new_ip, login.blocked.
-      Regla: email.changed se envía al correo VIEJO (por si fue un ataque).
-      Regla: login.blocked se envía solo si el correo existe en BD,
-      máximo 1 correo por hora por usuario (Cache).
+      email.changed va al correo VIEJO.
+      login.blocked solo si el correo existe en BD, máx 1 por hora.
 
 CONTRATO C7 (detalle)
   cambiarTipo: estandar <-> familiar. Familiar -> estandar bloqueado con metas
     compartidas activas. Solo estandar y familiar.
   cambiarRol: cualquiera de los 3. Quitar admin se bloquea si es el último admin.
   suspender / reactivar: activo=false/true. Bloquea si es el último admin.
-  eliminarCuenta: cancela metas compartidas, transfiere creador_id, borra en
-    cascada, cierra sesión vaciando remember_token antes de Auth::logout.
+  eliminarCuenta: cancela metas compartidas, transfiere creador_id, borra la
+    foto de perfil del disco, borra en cascada, cierra sesión vaciando
+    remember_token antes de Auth::logout.
   solicitarCambioCorreo / reenviarConfirmacionCorreo / confirmarCambioCorreo:
     ver decisión #49.
 
@@ -1028,35 +1019,51 @@ CONTRATO C17 (iconografía por categoría)
     <x-categoria-icono :icono="'plane'" />.
   - Prioridad: prop $icono → $categoria->icono (BD) → nombre mapeado
     (solo si es del sistema) → bloque.
-  - Catálogo: Categoria::ICONOS (16 claves: home, bolt, cart, car, heart, cap,
-    utensils, film, shirt, refresh, plane, piggy, trending, card, sparkles, tag).
+  - Catálogo: Categoria::ICONOS (16 claves).
   - Validación en StoreCategoriaRequest y StoreCategoriaSistemaRequest con
     Rule::in(array_keys(Categoria::ICONOS)).
-  - Al agregar una categoría nueva del sistema: sumar al $mapa del componente
-    + un @case con su SVG + entrada en Categoria::ICONOS si aplica.
 
-CONTRATO C18 (auditoría)                                              [NUEVO]
+CONTRATO C18 (auditoría)
   - Servicio: App\Services\Auditoria::registrar(...).
   - Parámetros: accion (string 50), modelo (string|null), modeloId (int|null),
     antes (array|null), despues (array|null).
-  - Solo INSERT. La tabla `auditorias` es inmutable (no UPDATE, no DELETE
-    desde código de app; solo desde SQL directo si se necesita purgar).
-  - Captura ANTES del cambio, y lee el valor DESPUÉS con `fresh()`.
-  - En `destroy`: capturar `$idBorrado` y `$rolBorrado` antes de eliminar.
-  - Eventos actuales: ver §9 tipos de acción.
+  - Solo INSERT. La tabla es inmutable.
+  - Captura ANTES del cambio y lee el nuevo con fresh().
+  - En destroy: capturar $idBorrado y $rolBorrado antes de eliminar.
+  - Llamar como $this->auditoria->registrar(...) (instancia inyectada),
+    NUNCA Auditoria::registrar(...) (estático).
 
-CONTRATO C19 (notificaciones de seguridad)                            [NUEVO]
-  - Notification: App\Notifications\AlertaSeguridad.
-  - Implements ShouldQueue: no bloquea el flujo si el SMTP falla.
-  - Cada envío va envuelto en try/catch con Log::warning.
-  - Eventos y cuándo:
-    · password.changed → tras reset exitoso.
-    · email.changed → tras confirmar el nuevo correo, al correo VIEJO.
-    · account.suspended → al suspender desde el panel admin.
-    · login.new_ip → login exitoso desde IP distinta a la última (o primer
-      login tras registro: NO notifica).
-    · login.blocked → cuando el RateLimiter dispara (Cache 1h por usuario).
+CONTRATO C19 (notificaciones de seguridad)
+  - Notification: App\Notifications\AlertaSeguridad (implements ShouldQueue).
+  - Envolver en try/catch con Log::warning.
+  - Eventos: password.changed, email.changed (al correo VIEJO),
+    account.suspended, login.new_ip, login.blocked.
 
+CONTRATO C20 (onboarding tour) [NUEVO]
+  - Motor: public/js/onboarding.js + public/css/onboarding.css.
+  - Componente: <x-onboarding-tour name="dashboard|admin-panel"
+    :auto-start="true|false" />.
+  - auto-start=true solo en dashboard y admin/panel.
+  - auto-start=false en ajustes/perfil (solo botón de relanzar).
+  - Targets con data-tour="...". El HTML del tour se appendea a <html>,
+    no a <body> (evita bug position:fixed con body{transform}).
+  - API: CCOnboarding.start(name) / autoStart(name) / restart(name) /
+    reset(name) / isDone(name) / isMobile().
+  - Evento cc-tour:finished disparado al terminar/omitir.
+  - Para añadir un tour: agregar entrada en `tours` + data-tour en la vista
+    + <x-onboarding-tour name="..." /> al final.
+
+CONTRATO C21 (foto de perfil) [NUEVO]
+  - SIEMPRE <x-user-avatar :user :size />. Nunca <img> directo.
+  - Formulario con enctype="multipart/form-data".
+  - Validación en UpdatePerfilRequest.
+  - Subida manejada aparte en AjustesController@actualizarPerfil
+    (extraer del validated, no es mass-assignable).
+  - Al reemplazar: borrar archivo anterior del disk antes de guardar el nuevo.
+  - Al eliminar cuenta: ServicioCuentas::eliminarCuenta borra el archivo.
+  - Accessor avatar_url devuelve URL relativa en dev; URL completa del
+    bucket en prod S3/R2.
+  - Ver §17 para el detalle de almacenamiento dev vs prod.
 
 ----------------------------------------------------------------------
 11. REGLAS DE NEGOCIO QUE NO SE PUEDEN ROMPER
@@ -1069,19 +1076,17 @@ Seguridad y privacidad
   - Límite de intentos en login y recuperación.
   - Consentimiento de datos obligatorio en el registro, con fecha.
   - Expiración de sesión por inactividad: 15 minutos vía middleware
-    'sesion.inactividad'. Requiere SESSION_LIFETIME (480) > LIMITE_MINUTOS (15).
-    Mensaje "Tu sesión expiró por inactividad" en el login.
+    'sesion.inactividad'.
   - Cabeceras de seguridad HTTP obligatorias: X-Frame-Options, nosniff,
     Referrer-Policy, Permissions-Policy, CSP, HSTS (producción + HTTPS).
-                                                                     [NUEVO 2026-10-22]
   - Re-autenticación (current_password) obligatoria para: eliminar usuario,
-    activar/desactivar categoría del sistema.                         [NUEVO 2026-10-22]
+    activar/desactivar categoría del sistema, eliminar categoría del sistema.
   - Auditoría obligatoria en cada cambio de admin: usuario.rol,
     usuario.suspender/reactivar, usuario.eliminar, categoria.crear/actualizar/
-    desactivar/reactivar.                                              [NUEVO 2026-10-22]
+    desactivar/reactivar/eliminar.
   - Notificación de seguridad obligatoria en: password.changed,
     email.changed (al correo VIEJO), account.suspended, login.new_ip,
-    login.blocked.                                                    [NUEVO 2026-10-22]
+    login.blocked.
 Metas
   - Individual: solo creador. Estándar y familiar.
   - Compartida: solo familiar, máx. 2 participantes.
@@ -1107,10 +1112,11 @@ Eliminar cuenta / suspender
   - Admin no puede eliminarse a sí mismo desde el panel.
   - Admin tampoco puede eliminar su cuenta desde Ajustes.
   - Vaciar remember_token antes de Auth::logout.
+  - Borrar foto de perfil del disco antes del delete.
 Restablecer contraseña
   - Enlace de un solo uso, vence en 30 minutos (AUTH_PASSWORD_RESET_EXPIRE).
   - Mensaje neutro. Correo con identidad de marca.
-  - Tras reset exitoso, notifica password.changed.                  [NUEVO 2026-10-22]
+  - Tras reset exitoso, notifica password.changed.
 Gastos fijos y alertas
   - Solo mensuales. Si el mes no tiene ese día, último día del mes.
   - Alerta a 3 días y una de vencido. Comando diario IDEMPOTENTE.
@@ -1125,22 +1131,24 @@ Informes 50/30/20
   - Agrupa por bloque y categoría. Informe guardado no se recalcula.
 Dashboard
   - "Disponible del mes" = ingreso − gastos; no se guarda saldo.
-  - Usa Gasto::delPeriodo (no whereYear/whereMonth inline).        [NUEVO 2026-10-22]
+  - Usa Gasto::delPeriodo (no whereYear/whereMonth inline).
 Administración
   - Admin nunca ve datos financieros individuales.
-  - Categorías del sistema se desactivan, no se borran.
+  - Categorías del sistema se desactivan.
+  - Categorías del sistema SOLO se eliminan si no tienen gastos ni
+    gastos fijos (COUNT = 0). En caso contrario, se bloquea con mensaje
+    "Esta categoría está en uso (N gastos, M gastos fijos). No se puede
+    eliminar; desactívala en su lugar."
+  - Eliminar categoría requiere re-auth y se audita como categoria.eliminar.
   - Sistema nunca queda sin admin activo.
   - Admin no puede eliminarse a sí mismo desde el panel.
-  - Admin TAMPOCO tiene ingreso mensual. El campo no aparece en
-    Ajustes > Perfil y UpdatePerfilRequest lo rechaza si llega.
-  - Admin puede elegir el ícono de las categorías del sistema en
-    /admin/categorias.
+  - Admin TAMPOCO tiene ingreso mensual.
+  - Admin puede elegir el ícono de las categorías del sistema.
   - Estadísticas solo con COUNT y agregados.
   - /admin/panel solo con COUNT y agregados. Sin datos financieros.
-  - /admin/auditoria es solo lectura. Los registros no se modifican ni se
-    borran desde la app.                                             [NUEVO 2026-10-22]
-  - Eliminar usuario y activar/desactivar categoría exigen re-auth
-    (current_password).                                              [NUEVO 2026-10-22]
+  - /admin/auditoria es solo lectura.
+  - Eliminar usuario, activar/desactivar categoría y eliminar categoría
+    exigen re-auth (current_password).
 Categorías
   - Nombre único entre las del usuario.
   - Eliminar una con gastos: modal pide mover gastos.
@@ -1148,6 +1156,23 @@ Categorías
   - Botones usan btn-primary / btn-secondary / btn-danger.
   - Ícono: columna categorias.icono (nullable). Si es null, fallback por
     nombre (sistema) o bloque.
+Onboarding
+  - El tour se lanza automáticamente al cargar /panel o /admin/panel, si el
+    flag localStorage cc-tour:{name} no es "1".
+  - El usuario puede "Omitir tour" en cualquier paso (marca el flag).
+  - El botón "Ver tour de nuevo" en Ajustes/Perfil llama start() y relanza
+    el tour sin tocar el flag.
+  - Al terminar el tour de dashboard, se dispara cc-tour:finished y se
+    revela la welcome card.
+  - El tour NO bloquea el scroll del usuario.
+Foto de perfil
+  - Cualquier usuario puede subir, reemplazar o eliminar su foto.
+  - Validación: JPG/PNG/WebP, máx 2 MB.
+  - Al subir una nueva, la anterior se borra del disco.
+  - Al eliminar la cuenta, la foto se borra del disco.
+  - La imagen NUNCA se guarda en la BD; solo la ruta relativa.
+  - Accessor avatar_url devuelve URL relativa en dev (evita CSP + host mismatch).
+  - Al eliminar: `Storage::disk('public')->delete()` + foto_perfil=null.
 
 TINTE POR ROL:
   - El tinte comunica el rol. Estándar → verde; Familiar → morado;
@@ -1155,8 +1180,7 @@ TINTE POR ROL:
   - El tinte NO aplica a "peligro" (rojo), "error", 50/30/20, ni a los íconos
     de categoría (usan colores de bloque).
   - Correos respetan el tinte del rol vía PHP.
-  - Botones "guardar" NO son verdes: ícono check + font-weight + padding +
-    hover, manteniendo --accent del rol.
+  - Botones "guardar" NO son verdes.
 
 Mensajes EXACTOS conocidos: "Gasto guardado" · "Gasto actualizado" · "Gasto eliminado" ·
 "Meta creada" · "Meta abandonada" · "Meta cancelada" · "Meta finalizada" ·
@@ -1164,7 +1188,8 @@ Mensajes EXACTOS conocidos: "Gasto guardado" · "Gasto actualizado" · "Gasto el
 "Aporte registrado" · "Gasto fijo pagado" · "Tipo de cuenta actualizado" ·
 "Rol actualizado" · "Cuenta suspendida" · "Cuenta activada" · "Usuario eliminado" ·
 "Categoría creada" · "Categoría actualizada" · "Categoría activada" ·
-"Categoría desactivada" · "Esta categoría ya se encuentra registrada" ·
+"Categoría desactivada" · "Categoría eliminada" ·
+"Esta categoría ya se encuentra registrada" ·
 "Este correo ya se encuentra registrado" · "Usuario o contraseña incorrectos" ·
 "No hay gastos registrados en este periodo" · "No tienes simulaciones guardadas" ·
 "No hay datos suficientes para generar el informe" · "No tienes notificaciones pendientes".
@@ -1191,15 +1216,20 @@ Mensajes 2026-10-19 (página 404): "Página no encontrada" · "La página que bu
 existe o fue movida...".
 
 Mensajes 2026-10-20 (ícono / admin):
-  · "El icono seleccionado no es válido." (Rule::in(ICONOS) en los Requests)
-  · "El administrador no tiene ingreso mensual." (prohibitedIf en UpdatePerfilRequest)
+  · "El icono seleccionado no es válido."
+  · "El administrador no tiene ingreso mensual."
 
-Mensajes 2026-10-22 (seguridad):                                    [NUEVO 2026-10-22]
-  · "Ingresa tu contraseña para confirmar." (EliminarUsuarioRequest.required)
-  · "La contraseña no es correcta." (EliminarUsuarioRequest.current_password)
-  · "Ingresa tu contraseña para confirmar." (EliminarCategoriaSistemaRequest.required)
-  · "La contraseña no es correcta." (EliminarCategoriaSistemaRequest.current_password)
+Mensajes 2026-10-22 (seguridad):
+  · "Ingresa tu contraseña para confirmar."
+  · "La contraseña no es correcta."
 
+Mensajes 2026-10-22 v2 (foto de perfil / eliminar categoría):
+  · "La foto debe ser una imagen válida."
+  · "La foto debe ser JPG, PNG o WebP."
+  · "La foto no puede superar los 2 MB."
+  · "Esta categoría está en uso (N gastos, M gastos fijos). No se puede
+     eliminar; desactívala en su lugar."
+  · "No se pudo eliminar la categoría. Intenta de nuevo."
 
 ----------------------------------------------------------------------
 12. CONVENCIONES DE CÓDIGO
@@ -1213,69 +1243,71 @@ Mensajes 2026-10-22 (seguridad):                                    [NUEVO 2026-
       · Peligro: --error o .btn-danger.
       · 50/30/20: --need, --want, --save.
       · NUNCA var(--primary) directo.
-      · NUNCA style="" inline salvo anchos dinámicos (% de barras), que se
-        documentan con un comentario en la vista.
+      · NUNCA style="" inline salvo anchos dinámicos (% de barras),
+        documentados con comentario en la vista.
   - PHP: Laravel Pint.
   - Cada clase PHP nueva lleva comentario inicial.
   - Dinero: enteros en pesos. Textos en español. Sin enlaces "#".
-  - Responsive: 1440, 768, 390 px; botones compactos pueden bajar a 32 px en
-    contextos de fila de datos.
+  - Responsive: 1440, 768, 390 px.
   - Git: nadie sube directo a main; una rama por tarea; commits en español.
-  - Migraciones: una migración unida a main NO se edita. Solo Juan crea migraciones.
+  - Migraciones: una migración unida a main NO se edita. Solo Juan crea
+    migraciones.
   - Nunca se suben .env, database.sqlite ni APP_KEY.
-  - Definición de terminado: hace lo que dice la guía; igual al diseño; mensajes
-    exactos; solo datos del usuario autenticado; estados vacío/error/éxito;
-    pruebas que pasan; cabeceras actualizadas; revisada y unida a main.
+  - Definición de terminado: hace lo que dice la guía; igual al diseño;
+    mensajes exactos; solo datos del usuario autenticado; estados
+    vacío/error/éxito; pruebas que pasan; cabeceras actualizadas; revisada
+    y unida a main.
 
 Convenciones de refinamiento visual (2026-10-14):
   - Botón nuevo: btn-primary o btn-danger. Nunca hex inline.
-  - Componente con color de marca: --accent / --accent-hover / --accent-container.
+  - Componente con color de marca: --accent / --accent-hover /
+    --accent-container.
   - Toda pantalla hereda modo claro/oscuro y tinte por rol.
   - prefers-reduced-motion en animaciones propias.
   - No cargar fuentes dentro de las pantallas: solo en base.blade.php.
 
 Convenciones de notificaciones (2026-10-16):
-  - Siempre ServicioNotificaciones (C4). No escribir directo en la tabla.
+  - Siempre ServicioNotificaciones (C4).
   - Constantes TIPO_* y ESTADO_*.
   - clave_unica "{tipo}:{recurso_id}".
   - Solo el comando alertas:gastos-fijos genera alertas automáticas.
-  - En notificaciones.css, el modo oscuro usa --soon, --late, --ok, --wait, --accent.
+  - En notificaciones.css, el modo oscuro usa --soon, --late, --ok, --wait,
+    --accent.
 
 Convenciones de cuentas (2026-10-16):
   - ServicioCuentas::eliminarCuenta / cambiarRol / suspender / reactivar.
   - Capturar ValidationException.
   - remember_token antes de Auth::logout si delete fue antes.
+  - eliminarCuenta también borra el archivo de foto_perfil del disco.
 
 Convenciones del dashboard (2026-10-16):
   - delUsuario(auth()->id()) o relaciones del usuario.
   - Refresca pagos del mes con ServicioGastosFijos.
   - Tarjeta de metas solo si rol familiar.
-  - Usa Gasto::delPeriodo (nunca whereYear/whereMonth inline).  [NUEVO 2026-10-22]
+  - Usa Gasto::delPeriodo (nunca whereYear/whereMonth inline).
 
 Convenciones de administración (2026-10-16):
   - Admin gestiona usuarios y categorías del sistema, nunca montos.
-  - EstadisticaController solo COUNT y GROUP BY.
-  - PanelController solo COUNT y GROUP BY.
-  - Categorías del sistema se desactivan, no se borran.
+  - EstadisticaController y PanelController: solo COUNT y GROUP BY.
+  - Categorías del sistema se desactivan. Solo se eliminan si COUNT = 0.
   - Admin no se elimina a sí mismo desde el panel.
   - Admin no accede a ajustes.tipo-cuenta ni ajustes.eliminar-cuenta (403).
-  - Admin NO tiene ingreso mensual. La vista no lo muestra y el Request lo
-    rechaza con prohibitedIf.
-  - AuditoriaController solo lectura.                            [NUEVO 2026-10-22]
+  - Admin NO tiene ingreso mensual.
+  - AuditoriaController solo lectura.
   - UsuarioController y CategoriaSistemaController usan Auditoria en cada
-    mutación.                                                    [NUEVO 2026-10-22]
+    mutación.
+  - En destroy: capturar idBorrado antes del delete.
 
 Convenciones de logo, favicon y accesibilidad (2026-10-16):
   - <x-logo :alto="36" />. Nunca <img> externo.
   - Tokens --logo-* en theme.css bloque 10.
   - window.CC.refreshIcons() para el favicon.
   - Skip link en base.blade.php.
-  - Página 403 en resources/views/errors/403.blade.php.
-  - Página 404 en resources/views/errors/404.blade.php + Route::fallback().
+  - Página 403 en errors/403.blade.php.
+  - Página 404 en errors/404.blade.php + Route::fallback().
 
 Convenciones de correo (2026-10-17):
-  - resources/views/emails/*.
-  - Nunca MailMessage::line()/action(): usar ->view().
+  - resources/views/emails/*. Nunca MailMessage::line()/action().
   - Logo inline SVG por Content-ID.
   - Tinte por rol en PHP (no CSS).
   - Preheader, <meta color-scheme>, @media dark, fallback, nota de seguridad,
@@ -1291,14 +1323,10 @@ Convenciones de verificación de correo (2026-10-17):
 Convenciones de iconografía por categoría (2026-10-20):
   - Usa <x-categoria-icono />, nunca <img> ni emoji.
   - Catálogo en Categoria::ICONOS. Valida con Rule::in(array_keys(...)).
-  - El usuario elige en /categorias, el admin en /admin/categorias. Ambos con
-    la misma estética (radios estilizados, opción "auto" con varita mágica).
-  - El color del ícono lo aporta el contenedor con clases
-    .categoria-icono--{bloque} o .gf-expense-icon--{bloque} usando --need-*,
-    --want-*, --save-*. El componente recibe currentColor.
-  - Si agregas una categoría al sistema: suma al $mapa del componente y un
-    @case con su SVG. Actualiza también esta sección.
-  - No uses emojis (🏠, 🛒, 🔒) en UI: se ven distintos por SO/fuente.
+  - El usuario elige en /categorias, el admin en /admin/categorias.
+  - Colores por --need-*, --want-*, --save-*.
+  - Al agregar una categoría al sistema: sumar al $mapa del componente,
+    @case con su SVG, entrada en Categoria::ICONOS.
 
 Convenciones de botones "guardar" (2026-10-19):
   - btn btn-primary con color de marca del rol.
@@ -1309,66 +1337,97 @@ Convenciones de botones "guardar" (2026-10-19):
 Convenciones de sesión (2026-10-19):
   - Expira a los 15 min por inactividad vía middleware 'sesion.inactividad'.
   - Orden: ['sesion.inactividad', 'auth', 'cuenta.activa'].
-  - Cambiar LIMITE_MINUTOS en el middleware, no SESSION_LIFETIME, salvo que el
-    nuevo límite supere el actual.
-  - No agregues otros middlewares de expiración.
+  - Cambiar LIMITE_MINUTOS en el middleware, no SESSION_LIFETIME.
 
 Convenciones del dashboard del administrador (2026-10-21):
   - /admin/panel es la pantalla principal del admin.
-  - Solo COUNT y agregados. Sin montos, gastos, informes, metas ni simulaciones.
-  - El header "Ir a mi panel" apunta a admin.panel si rol=administrador,
-    a panel si estandar|familiar. Nunca hardcodear route('panel') sin
-    condicionar por rol.
+  - Solo COUNT y agregados.
+  - "Ir a mi panel" calcula el destino por rol.
   - /admin/estadisticas se mantiene como pantalla de agregados detallados.
-    No se borra ni se duplica.
-  - PanelController separado de EstadisticaController para no romper tests.
+  - PanelController separado de EstadisticaController.
 
-Convenciones de seguridad J9 (2026-10-22):                            [NUEVO 2026-10-22]
+Convenciones de seguridad J9 (2026-10-22):
   - Cabeceras HTTP: SecurityHeaders::class appended globalmente en
-    bootstrap/app.php. No añadir otro middleware de headers.
-  - Auditoría: usar App\Services\Auditoria::registrar(). Captura el valor
-    ANTES de la mutación y lee el nuevo con ->fresh(). En destroy, captura
-    $idBorrado y $rolBorrado antes del delete.
-  - Notificación de seguridad: App\Notifications\AlertaSeguridad (implements
-    ShouldQueue). Envolver siempre en try/catch con Log::warning para no
-    bloquear el flujo principal si el SMTP falla.
-  - Re-auth: cualquier acción destructiva nueva debe usar un FormRequest con
-    `current_password` (ver EliminarUsuarioRequest).
-  - Throttles inline con `->middleware('throttle:N,M')`:
+    bootstrap/app.php.
+  - Auditoría: usar $this->auditoria->registrar() (instancia inyectada),
+    NO Auditoria::registrar() (estático). Captura antes/después con fresh().
+    En destroy, captura $idBorrado y $rolBorrado antes del delete.
+  - AlertaSeguridad (ShouldQueue). Envolver en try/catch con Log::warning.
+  - Re-auth: FormRequest con `current_password` (ver EliminarUsuarioRequest
+    y EliminarCategoriaSistemaRequest).
+  - Throttles inline con ->middleware('throttle:N,M'):
     registro.guardar (5,1), password.email (5,1), password.update (5,1),
-    ajustes.confirmar-correo.reenviar (1,1), admin.usuarios.rol (30,1).
-  - Bug conocidos corregidos:
+    ajustes.confirmar-correo.reenviar (1,1), admin.usuarios.rol (30,1),
+    admin.categorias.destroy (30,1).
+  - Bugs conocidos corregidos:
     · CategoriasSistemaController@desactivar no debe tener abort_unless
-      propio; la validación de categoría del sistema va en
-      EliminarCategoriaSistemaRequest::authorize() para que el 403 ocurra
-      antes que la validación de password.
-    · El archivo tests/Feature/AuthTest.php debe contener `class AuthTest`,
-      no `class UsuariosTest` (bug corregido en J9, 35 tests no corrían).
+      propio; la validación va en EliminarCategoriaSistemaRequest::authorize().
+    · AuthTest.php debe contener `class AuthTest`.
   - Autoload de Composer en entorno local: usar Herd 8.4
-    (php /c/Users/juane/.config/herd-lite/bin/composer.phar). NO usar XAMPP 8.2.
+    (php /c/Users/juane/.config/herd-lite/bin/composer.phar). NO usar
+    XAMPP 8.2.
 
-Convenciones de scripts de deploy (2026-10-22):                       [NUEVO 2026-10-22]
+Convenciones de scripts de deploy (2026-10-22):
   - docs/juan/deploy.sh con set -euo pipefail.
-  - Paso obligatorio: composer audit --no-dev --locked --format=plain
-    ANTES de composer install. Si falla, el script aborta.
+  - Paso obligatorio: composer audit --no-dev --locked --format=plain ANTES
+    de composer install. Si falla, el script aborta.
   - Modo mantenimiento activado al inicio, desactivado al final.
   - Migración con --force (nunca fresh, nunca seed).
   - Re-cachear config, route, view, event.
   - Re-own y chmod de storage y bootstrap/cache.
   - queue:restart para reiniciar workers.
+  - Tras deploy, ejecutar `php artisan storage:link` si no existe.
+    Si se usa S3/R2, no aplica (los archivos van al bucket).
 
-Convenciones de backups (2026-10-22):                                 [NUEVO 2026-10-22]
+Convenciones de backups (2026-10-22):
   - Script backup-cuentas-claras.sh en /usr/local/bin (no versionado en repo).
   - Cron diario a las 02:00.
   - Comprime con gzip, retiene 30 días.
-  - Copia off-site obligatoria (S3, B2, otro servidor). Backup en mismo
-    servidor se pierde si el servidor muere.
+  - Copia off-site obligatoria (S3, B2, otro servidor).
   - Restauración verificada mensualmente en staging.
   - Documentar en docs/juan/backups.md: fecha de última restauración exitosa,
     fecha del backup restaurado, incidencias.
-  - El APP_KEY no se versiona ni se backupea junto con la BD (guardar en
-    gestor de secretos aparte).
+  - El APP_KEY no se versiona ni se backupea junto con la BD.
+  - Si se usa S3/R2, la copia de los archivos la gestiona el proveedor
+    (versionado del bucket).
 
+Convenciones de onboarding (2026-10-22 v2):                          [NUEVO]
+  - Motor en public/js/onboarding.js (sin dependencias).
+  - Componente <x-onboarding-tour name="..." :auto-start="true|false" />.
+    auto-start=true solo en dashboard y admin/panel.
+    auto-start=false en ajustes/perfil (solo permitir relanzar).
+  - Targets con data-tour="...". Nunca IDs ni clases.
+  - Los tours viven en el objeto `tours` al inicio de onboarding.js.
+  - Para añadir un tour: agregar entrada en `tours` + data-tour en la vista
+    + <x-onboarding-tour name="..." /> al final.
+  - Persistencia en localStorage.setItem('cc-tour:{name}', '1') al
+    terminar u omitir. No se toca al hacer restart.
+  - API pública: CCOnboarding.start / autoStart / restart / reset / isDone /
+    isMobile.
+  - El HTML del tour se appendea a <html>, no a <body>.
+  - El tour NO bloquea el scroll.
+  - Para forzar el tour en desarrollo: borrar cc-tour:{name} de
+    localStorage o usar CCOnboarding.restart('dashboard') en consola.
+
+Convenciones de foto de perfil (2026-10-22 v2):                     [NUEVO]
+  - SIEMPRE usar <x-user-avatar :user :size />. Nunca <img> directo.
+  - Formulario con enctype="multipart/form-data".
+  - Validación en UpdatePerfilRequest (no en el controller).
+  - Subida se extrae del $request->validated() y se maneja aparte.
+  - Al reemplazar: borrar archivo anterior del disk ANTES de guardar el
+    nuevo. Al eliminar: borrar del disk y foto_perfil = null.
+  - Al eliminar cuenta: ServicioCuentas::eliminarCuenta borra el archivo.
+  - Accessor avatar_url devuelve URL relativa en dev (/storage/...) para
+    evitar CSP + host mismatch. En prod S3 devuelve la URL del bucket.
+  - NUNCA guardar la imagen en la BD (ver §17).
+
+Convenciones de almacenamiento (2026-10-22 v2):                     [NUEVO]
+  - Disk 'public' como abstracción: Storage::disk('public')->...
+  - En desarrollo: symlink con `php artisan storage:link`. Windows:
+    mklink /J si falla.
+  - En producción: ver §17. S3/R2 con league/flysystem-aws-s3-v3,
+    cambiando solo config/filesystems.php y .env.
+  - Cada dev tiene sus propias fotos subidas (no se versionan).
 
 ----------------------------------------------------------------------
 13. ORDEN DE CONSTRUCCIÓN
@@ -1385,35 +1444,40 @@ Convenciones de backups (2026-10-22):                                 [NUEVO 202
      V4 ajustes (HECHO 2026-10-17), N4 notificaciones (HECHO 2026-10-17),
      Verificación de cambio de correo (HECHO 2026-10-17),
      Rediseño del correo de reset (HECHO 2026-10-17)
-  8. N5 landing (EN CURSO 2026-10-19). Reemplaza los Route::view de público.php.
-     Falta validar cifras y textos legales (#21).
+  8. N5 landing (EN CURSO 2026-10-19).
   9. J9 seguridad, integración y despliegue. AVANZADO 2026-10-22.
-     Completado: auditoría, notificaciones de seguridad, regeneración de sesión,
-     CSP, re-auth destructivas, notificación de bloqueo, throttles, backup
-     procedure, deploy.sh, delPeriodo (TODO J8 cerrado), fix de 3 bugs de tests.
-     Pendiente J9.2: 2FA (paquetes no instalados), composer audit (Composer
-     no accesible desde Git Bash), grep de logs.
-  *  Sesión 2026-10-14: modo oscuro + tinte + píldora topbar + transiciones.
-  *  Sesión 2026-10-16: J6 + J8a + J8 + J7 + pulido.
-  *  Sesión 2026-10-17: V4 + N4 + verificación de correo + rediseño de reset.
-  *  Sesión 2026-10-19: restricción de Ajustes al admin, 404 personalizada,
-     sesión 15 min, iconografía por categoría, tarjetas de gastos fijos compactas.
-  *  Sesión 2026-10-20: columna categorias.icono + catálogo Categoria::ICONOS
-     + selector de íconos para usuario y admin + admin sin ingreso mensual.
-  *  Sesión 2026-10-21: dashboard del administrador (/admin/panel) + fix del
-     header "Ir a mi panel" según rol + docs/00-rutas.php a 65 rutas.
-  *  Sesión 2026-10-22: J9 (parcial) — auditoría, notificaciones de seguridad,
-     CSP, re-auth, throttles, backup procedure, deploy.sh, delPeriodo.
-     Fix de 3 bugs de tests. 2FA, composer audit y grep de logs quedan
-     pendientes en J9.2.                                        [NUEVO 2026-10-22]
+     Completado: auditoría, notificaciones de seguridad, regeneración de
+     sesión, CSP, re-auth destructivas, notificación de bloqueo, throttles,
+     backup procedure, deploy.sh, delPeriodo (TODO J8 cerrado), fix de 3
+     bugs de tests.
+     Pendiente J9.2: 2FA (paquetes no instalados), composer audit, grep
+     de logs.
+ 10. Onboarding tour + admin elimina categorías + foto de perfil
+     (HECHO 2026-10-22 v2).
+
+  * Sesión 2026-10-14: modo oscuro + tinte + píldora topbar + transiciones.
+  * Sesión 2026-10-16: J6 + J8a + J8 + J7 + pulido.
+  * Sesión 2026-10-17: V4 + N4 + verificación de correo + rediseño de reset.
+  * Sesión 2026-10-19: restricción de Ajustes al admin, 404 personalizada,
+    sesión 15 min, iconografía por categoría.
+  * Sesión 2026-10-20: columna categorias.icono + catálogo + selector de
+    íconos + admin sin ingreso mensual.
+  * Sesión 2026-10-21: dashboard del administrador (/admin/panel) + fix
+    del header según rol.
+  * Sesión 2026-10-22: J9 (parcial) — auditoría, notificaciones de seguridad,
+    CSP, re-auth, throttles, backup procedure, deploy.sh, delPeriodo.
+    Fix de 3 bugs de tests. 2FA, composer audit y grep de logs quedan
+    pendientes en J9.2.
+  * Sesión 2026-10-22 v2: onboarding tour, admin elimina categorías,
+    foto de perfil, sección de almacenamiento (dev symlink + prod S3/R2).
 Siguiente de Juan: cerrar J9.2 (2FA, composer audit, logs).
-Siguiente de Nikol: cerrar N5 (landing + páginas legales) y validar cifras (#21).
-Siguiente de Valeria: apoyar N5 en la revisión visual y arrancar la lista de J9.
+Siguiente de Nikol: cerrar N5 (landing + páginas legales) y validar cifras.
+Siguiente de Valeria: apoyar N5 en la revisión visual y arrancar la lista
+de J9.
 Al terminar todo (J9): no debe quedar ningún aviso "MAQUETA" en módulos reales.
 Comparar php artisan route:list --except-vendor con docs/backend/00-rutas.php
-(68 rutas reales + fallback = 69 mostradas).
+(69 rutas reales + fallback = 70 mostradas).
 Pendientes: 2FA, composer audit, grep de logs, instalar backup-cuentas-claras.sh.
-
 
 ----------------------------------------------------------------------
 14. DECISIONES
@@ -1451,8 +1515,7 @@ DECISIONES DEL 2026-10-16 (J8a): #35..#36
 
 DECISIONES DEL 2026-10-16 (J8): #37..#41
   #37 Dashboard refresca pagos del mes.
-  #38 whereYear/whereMonth hasta que exista delPeriodo (CERRADA 2026-10-22:
-      delPeriodo ya existe y DashboardController lo usa).
+  #38 whereYear/whereMonth hasta que exista delPeriodo (CERRADA 2026-10-22).
   #39 Tarjeta de metas solo si familiar.
   #40 Cast de fecha y monto en Gasto.
   #41 Dashboard usa clases del code.html.
@@ -1460,8 +1523,7 @@ DECISIONES DEL 2026-10-16 (J8): #37..#41
 DECISIONES DEL 2026-10-16 (J7): #42..#44
   #42 Tinte admin Core Blue (#2563EB claro / #93b4ff oscuro).
   #43 Admin no se elimina a sí mismo desde el panel.
-  #44 Auditoría de acciones del admin: [PROPUESTA 2026-10-16]
-      → CERRADA 2026-10-22 (decisión #61).
+  #44 Auditoría de acciones del admin: CERRADA 2026-10-22 (decisión #61).
 
 DECISIONES DEL 2026-10-16 (pulido): #45..#48
   #45 Logo SVG inline.
@@ -1473,7 +1535,8 @@ DECISIONES DEL 2026-10-17 (V4 + correo): #49..#52
   #49 Verificación de cambio de correo (SHA-256, 1 hora, correo al NUEVO,
       logout al confirmar, reenvío).
   #50 Rediseño del correo de reset. Vencimiento 60 → 30 minutos.
-  #51 Notification::route('mail', $destinatario) si no es el usuario autenticado.
+  #51 Notification::route('mail', $destinatario) si no es el usuario
+      autenticado.
   #52 remember_token antes de Auth::logout para evitar re-INSERT.
 
 DECISIONES DEL 2026-10-19: #53..#57
@@ -1498,85 +1561,66 @@ DECISIONES DEL 2026-10-20: #58..#59
       · Vista: campo oculto con @if(!$esAdmin).
       · Request: Rule::prohibitedIf + borrar en prepareForValidation.
       · Controller: si es admin, no asigna 'ingreso_mensual'.
-      · Motivo: el admin no tiene finanzas personales ni dashboard; el campo
-        no aplica y no debe poder inyectarse por POST manipulado.
+      · Motivo: el admin no tiene finanzas personales ni dashboard; el
+        campo no aplica y no debe poder inyectarse por POST manipulado.
 
 DECISIONES DEL 2026-10-21: #60
   #60 Dashboard del administrador en /admin/panel:
-      · Nueva ruta admin.panel (GET /admin/panel) como pantalla principal
-        del administrador. Primera ruta del Grupo E.
-      · PanelController nuevo (separado de EstadisticaController, que mantiene
-        su responsabilidad y sus 3 tests).
-      · Solo COUNT y agregados. Sin datos financieros (§11).
-      · El header "Ir a mi panel" apunta a admin.panel si rol=administrador,
-        a panel si estandar|familiar. Fix del bug del 404 en /panel para admin.
-      · /admin/estadisticas se mantiene como pantalla de agregados detallados.
-        No se borra ni se duplica.
-      · docs/backend/00-rutas.php pasa a 65 rutas (11+9+35+0+10).
-      · Motivo: el admin no tiene dashboard propio. /admin/estadisticas era
-        solo COUNT y no daba una visión general. Un dashboard unifica KPIs,
-        accesos rápidos y últimos movimientos (sin datos financieros).
+      · Nueva ruta admin.panel (GET /admin/panel).
+      · PanelController nuevo (separado de EstadisticaController).
+      · Solo COUNT y agregados. Sin datos financieros.
+      · "Ir a mi panel" calcula el destino por rol.
+      · /admin/estadisticas se mantiene como pantalla de agregados
+        detallados. No se borra ni se duplica.
+      · Motivo: el admin no tiene dashboard propio. Un dashboard unifica
+        KPIs, accesos rápidos y últimos movimientos.
 
-DECISIONES DEL 2026-10-22: #61..#67                               [NUEVO 2026-10-22]
+DECISIONES DEL 2026-10-22: #61..#67
   #61 Auditoría de acciones del admin (CERRADA 2026-10-22):
       · Tabla `auditorias` (user_id, accion, modelo, modelo_id, antes JSON,
         despues JSON, ip, user_agent, timestamps) con índices
         (user_id, created_at), (modelo, modelo_id), accion.
       · Modelo Auditoria (casts JSON, solo INSERT, inmutable).
       · Servicio App\Services\Auditoria::registrar().
-      · AuditoriaController@index (solo lectura, filtros por acción/admin/fecha).
+      · AuditoriaController@index (solo lectura, filtros).
       · Ruta admin.auditoria. Ítem en sidebar-admin.
-      · UsuarioController y CategoriaSistemaController usan Auditoria en cada
-        mutación.
+      · UsuarioController y CategoriaSistemaController usan Auditoria en
+        cada mutación.
       · Eventos: usuario.rol, usuario.suspender, usuario.reactivar,
         usuario.eliminar, categoria.crear, categoria.actualizar,
         categoria.desactivar, categoria.reactivar.
-      · user_id es nullable + nullOnDelete: el histórico sobrevive al borrado
-        del admin.
-      · Motivo: trazabilidad completa de acciones admin, exigible en
-        escenarios de soporte y compliance.
+      · user_id nullable + nullOnDelete.
+      · Motivo: trazabilidad completa de acciones admin.
   #62 Notificaciones de seguridad (AlertaSeguridad):
       · Notification con ShouldQueue. 5 eventos: password.changed,
         email.changed, account.suspended, login.new_ip, login.blocked.
-      · email.changed se envía al correo VIEJO (por si el cambio fue un
-        ataque; el dueño se entera).
-      · login.new_ip se envía solo si NO es el primer login tras registro
-        (User::esIpNueva compara contra last_login_ip / last_login_at).
-      · login.blocked se envía desde LoginRequest::notificarBloqueo() con
-        Cache 1h por usuario para no spamear.
-      · Cada notify va en try/catch con Log::warning para no bloquear el flujo
-        principal si el SMTP falla.
-      · Columnas nuevas users.last_login_ip, users.last_login_at.
-        User::registrarLogin() los asigna con forceFill.
-      · Motivo: el usuario se entera si alguien le cambió contraseña, correo
-        o intenta entrar.
+      · email.changed se envía al correo VIEJO.
+      · login.new_ip solo si NO es el primer login tras registro.
+      · login.blocked desde LoginRequest::notificarBloqueo() con Cache 1h.
+      · Cada notify en try/catch con Log::warning.
+      · Columnas users.last_login_ip, users.last_login_at.
+      · Motivo: el usuario se entera si alguien le cambió contraseña,
+        correo o intenta entrar.
   #63 Re-autenticación para acciones destructivas:
       · EliminarUsuarioRequest y EliminarCategoriaSistemaRequest con
         `current_password`.
-      · UsuarioController@destroy y CategoriaSistemaController@desactivar
-        usan estos Requests.
       · El authorize() de EliminarCategoriaSistemaRequest valida categoría
-        del sistema (user_id === null) ANTES de la validación de password,
-        para que el 403 ocurra primero.
+        del sistema antes de la validación de password, para que el 403
+        ocurra primero.
       · Motivo: si el admin deja la sesión abierta, un tercero no puede
         ejecutar acciones destructivas sin conocer la contraseña.
   #64 CSP (Content-Security-Policy):
       · Modo permisivo (con 'unsafe-inline' en script-src y style-src).
-      · Motivo: los 2 scripts inline del tema (base.blade.php) y los style=""
-        inline dinámicos (barras de progreso) romperían la CSP estricta.
-        Migrar a nonces queda para J9.2.
       · Google Fonts y Material Symbols autorizados explícitamente.
       · upgrade-insecure-requests solo en HTTPS.
-      · frame-ancestors 'none', base-uri 'self', object-src 'none' —
-        bloquea clickjacking, secuestro de base href y plugins.
+      · frame-ancestors 'none', base-uri 'self', object-src 'none'.
   #65 Regeneración de sesión:
       · Verificado con test_login_regenera_la_sesion.
-      · La sesión anterior no sirve después del login exitoso.
-      · Motivo: mitigar session fixation attacks.
+      · Mitiga session fixation attacks.
   #66 Notificación de bloqueo por intentos fallidos:
       · LoginRequest::notificarBloqueo() envía login.blocked al usuario.
-      · Solo si el correo existe en BD (no revelar existencia).
-      · Cache 1h por usuario (no spamear).
+      · Solo si el correo existe en BD.
+      · Cache 1h por usuario.
       · Motivo: avisar al dueño si alguien intenta entrar por fuerza bruta.
   #67 2FA (TOTP) para usuarios y admin: [PENDIENTE J9.2]
       · Paquetes: pragmarx/google2fa + bacon/bacon-qr-code.
@@ -1585,18 +1629,50 @@ DECISIONES DEL 2026-10-22: #61..#67                               [NUEVO 2026-10
       · TwoFactorController (activar, confirmar, desactivar).
       · Rutas: ajustes.seguridad.{index, 2fa.enable, 2fa.confirm, 2fa.disable},
         login.2fa, login.2fa.verify.
-      · Vistas: app/ajustes/seguridad.blade.php,
-        app/ajustes/seguridad-2fa-setup.blade.php,
-        publico/verificar-2fa.blade.php.
       · LoginController: si hasTwoFactorEnabled, desloguear y pedir código.
       · Desactivar requiere current_password.
-      · Motivo: capa extra de seguridad, especialmente para el admin (que
-        puede suspender/eliminar usuarios).
-      · Estado: diseño completo, no implementado por bloqueo de Composer en
-        el entorno local (ver §2 PENDIENTE J9.2).
+      · Estado: diseño completo, no implementado por bloqueo de Composer.
+
+DECISIONES DEL 2026-10-22 v2: #68..#70
+  #68 Onboarding tour sin dependencias:
+      · Motor en public/js/onboarding.js + public/css/onboarding.css.
+      · Tours definidos en JS: dashboard (7 pasos), admin-panel (6 pasos).
+      · Componente <x-onboarding-tour> con auto-start opcional.
+      · Persistencia en localStorage bajo cc-tour:{name}.
+      · API pública CCOnboarding.start / autoStart / restart / reset / isDone.
+      · Targets con data-tour="...".
+      · Tooltip flotante arriba/abajo del target (mismo motor desktop/mobile).
+      · Overlay con box-shadow 9999px. HTML del tour appendeado a <html>.
+      · Botón "Ver tour de nuevo" en Ajustes/Perfil.
+      · Evento cc-tour:finished revela welcome card del dashboard.
+      · Motivo: onboarding sin costo de mantenimiento, reusable, portable.
+  #69 Admin puede eliminar categorías del sistema (condicionado):
+      · Nueva ruta DELETE /admin/categorias/{categoria}.
+      · SOLO se eliminan si gastos_count + gastos_fijos_count = 0.
+      · Si tienen referencias: bloqueo con error "En uso".
+      · Re-auth (EliminarCategoriaSistemaRequest con current_password).
+      · Auditoría como categoria.eliminar (antes: {nombre,bloque};
+        despues: null).
+      · UI: botón "Eliminar" junto a "Desactivar" y "Editar", deshabilitado
+        con tooltip si está en uso.
+      · Motivo: permitir limpiar categorías obsoletas creadas por error
+        sin romper la integridad referencial. El botón principal sigue
+        siendo "Desactivar".
+  #70 Foto de perfil para cualquier rol:
+      · Columna users.foto_perfil (string 255, nullable).
+      · Archivo en storage/app/public/avatares/ (dev) o S3/R2 (prod).
+      · Accessor avatar_url con URL relativa en dev.
+      · Componente <x-user-avatar> con fallback a iniciales.
+      · Formulario multipart en Ajustes/Perfil con avatar inline, overlay
+        "Cambiar ícono", input oculto, preview con FileReader.
+      · Validación: JPG/PNG/WebP, máx 2 MB.
+      · Se borra del disco al eliminar la cuenta.
+      · NO se guarda la imagen en la BD (solo el path).
+      · Motivo: identidad visual del usuario sin dependencia de servicios
+        externos en desarrollo, con migración limpia a S3/R2 en producción
+        sin cambios de código (ver §17).
 
 Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
-
 
 ----------------------------------------------------------------------
 15. INSTRUCCIONES PARA UNA IA QUE TRABAJE EN ESTE PROYECTO
@@ -1604,8 +1680,8 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
   1. Antes de tocar un archivo, léelo entero y lee el plan en docs/backend/.
   2. No cambies el diseño. No agregues colores ni estilos nuevos al CSS global.
   3. No cambies URL ni nombres de ruta, variables ni campos.
-  4. No edites archivos compartidos si la tarea es de Nikol o Valeria; pide el
-     cambio a Juan. NUNCA edites una migración ya unida.
+  4. No edites archivos compartidos si la tarea es de Nikol o Valeria; pide
+     el cambio a Juan. NUNCA edites una migración ya unida.
   5. Toda consulta parte de auth()->user(); autoriza con Policy antes de leer
      o modificar. Listados: Modelo::delUsuario(auth()->id()).
   6. Usa los mensajes exactos; texto en español; dinero en enteros.
@@ -1622,7 +1698,7 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
  16. Permisos: $this->authorize() antes de leer/editar/borrar.
  17. Pruebas por módulo: dueño puede, ajeno 403, admin 403.
  18. Middleware por alias ('cuenta.activa', 'rol:...',
-     'sesion.inactividad'). Las líneas 'use' van arriba.
+     'sesion.inactividad').
  19. El rol estándar también entra a Metas.
  20. ServicioCuentas::cambiarTipo es la ÚNICA vía para cambiar el tipo.
  21. ServicioMetas::tieneMetasCompartidasActivas es la única vía para
@@ -1640,143 +1716,61 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
  29. La página 404 depende de Route::fallback() en web.php.
  30. La sesión expira a los 15 min vía middleware 'sesion.inactividad'. No
      dupliques con otros middlewares.
- 31. El admin NO tiene ingreso mensual. Ocúltalo en la vista
-     (@if(!$esAdmin)) y recházalo en el Request
-     (prohibitedIf + remove en prepareForValidation).
- 32. El catálogo de íconos está en Categoria::ICONOS. Para agregar uno nuevo,
-     agrega la entrada al array + el @case con el SVG en
-     <x-categoria-icono>. Valida con Rule::in(array_keys(Categoria::ICONOS)).
- 33. El usuario y el admin eligen ícono por radio buttons estilizados con
-     .categoria-icono-selector / .categoria-icono-label. La opción "auto"
-     envía '' y se normaliza a null para el fallback.
+ 31. El admin NO tiene ingreso mensual.
+ 32. El catálogo de íconos está en Categoria::ICONOS.
+ 33. Los selectores de íconos usan radio buttons estilizados con
+     .categoria-icono-selector / .categoria-icono-label.
  34. Categoria::iconoResuelto() prioriza: ícono guardado > nombre mapeado
-     (solo sistema) > bloque. No cambies ese orden: es lo que permite que el
-     admin sobreescriba el ícono por defecto de una categoría del sistema.
- 35. "Ir a mi panel" NUNCA va con route('panel') fijo. Calcula el destino:
-     admin → route('admin.panel'), estandar|familiar → route('panel').
-     Aparece en header (desktop + móvil) y sidebar.
- 36. /admin/panel es solo COUNT y agregados. Nunca montos, gastos, informes,
-     metas ni simulaciones. Es la misma regla que /admin/estadisticas.
- 37. Auditoría OBLIGATORIA en cada mutación del admin: usar
-     App\Services\Auditoria::registrar() con accion, modelo, modelo_id,
-     antes, despues. Captura el valor ANTES del cambio y lee el nuevo con
-     ->fresh(). En destroy, captura $idBorrado antes del delete.
-                                                                    [NUEVO 2026-10-22]
+     (solo sistema) > bloque.
+ 35. "Ir a mi panel" NUNCA va con route('panel') fijo.
+ 36. /admin/panel es solo COUNT y agregados.
+ 37. Auditoría OBLIGATORIA en cada mutación del admin vía
+     $this->auditoria->registrar(...) (instancia, no estático).
  38. Notificaciones de seguridad OBLIGATORIAS en: password.changed,
      email.changed (al correo VIEJO), account.suspended, login.new_ip,
      login.blocked. Envolver en try/catch con Log::warning.
-                                                                    [NUEVO 2026-10-22]
- 39. Re-autenticación (current_password) OBLIGATORIA para: eliminar usuario,
-     activar/desactivar categoría del sistema. Cualquier acción destructiva
-     nueva debe seguir el patrón de EliminarUsuarioRequest.
-                                                                    [NUEVO 2026-10-22]
+ 39. Re-auth (current_password) OBLIGATORIA para: eliminar usuario,
+     activar/desactivar categoría del sistema, eliminar categoría del
+     sistema.
  40. Throttles inline en: registro.guardar (5,1), password.email (5,1),
      password.update (5,1), ajustes.confirmar-correo.reenviar (1,1),
-     admin.usuarios.rol (30,1). Cualquier ruta nueva de auth o cambio de rol
-     debe llevar throttle.
-                                                                    [NUEVO 2026-10-22]
- 41. SecurityHeaders se aplica globalmente desde bootstrap/app.php. No
-     añadir otro middleware de headers sin removerlo.
-                                                                    [NUEVO 2026-10-22]
- 42. En el entorno local, usar Herd 8.4 (php /c/Users/juane/.config/herd-lite
-     /bin/composer.phar). NO usar XAMPP 8.2 (rompe el lock de Composer).
-                                                                    [NUEVO 2026-10-22]
+     admin.usuarios.rol (30,1), admin.categorias.destroy (30,1).
+ 41. SecurityHeaders se aplica globalmente desde bootstrap/app.php.
+ 42. En el entorno local, usar Herd 8.4 (php
+     /c/Users/juane/.config/herd-lite/bin/composer.phar). NO usar XAMPP 8.2.
  43. Cuando una ruta tenga FormRequest con authorize() que valide pertenencia
-     o tipo (ej. EliminarCategoriaSistemaRequest), NO añadir abort_unless
-     duplicado en el controlador. El 403 debe ocurrir en el authorize() para
-     que las validaciones de reglas (password) no lo intercepten antes.
-                                                                    [NUEVO 2026-10-22]
-
-Instrucciones de refinamiento visual (2026-10-14):
-  (botones con clases, --accent-*, rojo siempre rojo, no fuentes en pantallas,
-   prefers-reduced-motion, .topbar-acciones).
-
-Instrucciones de notificaciones (2026-10-16):
-  (ServicioNotificaciones, TIPO_*/ESTADO_*, clave_unica "{tipo}:{id}", solo el
-   comando genera alertas).
-
-Instrucciones de cuentas (2026-10-16):
-  (ServicioCuentas::eliminarCuenta / cambiarRol / suspender / reactivar;
-   ValidationException; remember_token antes de Auth::logout si delete fue antes).
-
-Instrucciones del dashboard (2026-10-16):
-  (delUsuario, refrescar pagos, tarjeta de metas solo si familiar, usar
-   Gasto::delPeriodo).
-
-Instrucciones de administración (2026-10-16):
-  (admin nunca montos, categorías del sistema se desactivan, ValidationException
-   si no se puede aplicar una regla, admin no se elimina a sí mismo, usar
-   ServicioCuentas, tinte admin Core Blue, layouts.admin y sidebar-admin).
-  · El admin no tiene ingreso mensual (ver #59).
-  · /admin/panel solo COUNT y agregados (ver #60).
-  · /admin/auditoria solo lectura (ver #61).
-  · Auditoría obligatoria en mutaciones (ver #61 y §12).
-  · Re-auth obligatoria en destructivas (ver #63 y §12).       [ACTUALIZADO 2026-10-22]
-
-Instrucciones de logo, favicon y accesibilidad (2026-10-16):
-  <x-logo />, tokens --logo-*, window.CC.refreshIcons(), skip link,
-  errors/403.blade.php, errors/404.blade.php.
-
-Instrucciones de correo y verificación (2026-10-17):
-  Vista propia, preheader + <meta color-scheme> + dark mode + fallback + nota
-  de seguridad. Tinte por rol en PHP. Token SHA-256. Correo al pending_email.
-  Logout tras confirmar. Reset 30 minutos (AUTH_PASSWORD_RESET_EXPIRE).
-
-Instrucciones de seguridad J9 (2026-10-22):                          [NUEVO 2026-10-22]
-  · CSP permisiva con 'unsafe-inline' (J9.2 lo migra a nonces).
-  · Todas las cabeceras de §3 obligatorias.
-  · Auditoría con App\Services\Auditoria::registrar().
-  · AlertaSeguridad (ShouldQueue) para 5 eventos.
-  · Re-auth (current_password) en destructivas.
-  · Throttle en auth y cambio de rol.
-  · Fix conocidos: AuthTest con class AuthTest; ajustes.confirmar-correo.reenviar
-    con path /confirmar-correo/reenviar (no /ajustes/confirmar-correo/reenviar
-    dentro del prefijo ajustes); EliminarCategoriaSistemaRequest::authorize()
-    valida categoría del sistema.
-  · deploy.sh con composer audit obligatorio antes de install.
-  · backup-cuentas-claras.sh documentado; falta instalar en servidor.
-
-Instrucciones nuevas (2026-10-19): #63..#68
-  (Ajustes al admin, _tabs oculta, 404 + fallback, sesión 15 min, iconos sin
-   emojis, botones guardar no verdes).
-
-Instrucciones nuevas (2026-10-20): #69..#72
- 69. El admin nunca tiene ingreso mensual. Se aplica en 3 capas: vista, Request
-     (prohibitedIf + remove en prepareForValidation), controlador (no asignar).
- 70. El catálogo de íconos vive en Categoria::ICONOS. Cualquier ícono nuevo
-     requiere: agregar al array, agregar el @case en <x-categoria-icono>, y
-     actualizar esta sección + docs.
- 71. El orden de prioridad en iconoResuelto() y en <x-categoria-icono> es:
-     icono guardado > nombre mapeado (sistema) > bloque. No cambiar ese orden.
- 72. Los selectores de íconos (usuario y admin) usan la misma estructura:
-     .categoria-icono-selector + .categoria-icono-label con :has(input:checked).
-     Reutiliza las clases; no introduzcas nuevas variantes visuales.
-
-Instrucciones nuevas (2026-10-21): #73..#74
- 73. "Ir a mi panel" siempre calcula el destino por rol. Nunca hardcodear
-     route('panel') sin condicionar.
- 74. /admin/panel solo COUNT y agregados. Sin datos financieros. Misma regla
-     que /admin/estadisticas.
-
-Instrucciones nuevas (2026-10-22): #75..#80                          [NUEVO 2026-10-22]
- 75. Auditoría obligatoria en cada mutación del admin vía
-     App\Services\Auditoria::registrar(). Captura antes/después con fresh()
-     y $idBorrado antes del delete.
- 76. AlertaSeguridad en 5 eventos: password.changed, email.changed (al
-     correo VIEJO), account.suspended, login.new_ip, login.blocked. Cada
-     notify en try/catch con Log::warning.
- 77. Re-auth (current_password) obligatoria para eliminar usuario y
-     activar/desactivar categoría del sistema. FormRequest con
-     authorize() que valide pertenencia/tipo antes de la regla de password.
- 78. Throttles inline obligatorios: auth (5,1), recuperación (5,1), reenvío
-     de correo (1,1), cambio de rol (30,1). Cualquier ruta nueva sensible
-     debe añadir throttle.
- 79. CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy y
-     HSTS (en prod+HTTPS) son obligatorios. No quitar SecurityHeaders del
-     bootstrap/app.php.
- 80. En entorno local, usar Herd 8.4 para PHP y Composer. NUNCA usar XAMPP
-     8.2 (rompe el lock de Composer).
-
+     o tipo, NO añadir abort_unless duplicado en el controlador.
+ 44. Onboarding: usa <x-onboarding-tour name="..." :auto-start="..." />.
+     auto-start=true solo en dashboard y admin/panel. auto-start=false en
+     ajustes/perfil.
+ 45. Targets del tour SIEMPRE con data-tour="...". Nunca IDs ni clases.
+     Antes de añadir un paso nuevo, verifica que el data-tour exista en el
+     HTML.
+ 46. El motor del tour se appendea a <html>, no a <body>. Si añades una
+     animación con transform al body, revisa que position:fixed siga
+     funcionando.
+ 47. Foto de perfil: SIEMPRE usar <x-user-avatar>. Formulario con
+     enctype="multipart/form-data". La subida se extrae del
+     $request->validated() y se maneja aparte. Al reemplazar, borrar
+     archivo anterior del disk ANTES de guardar el nuevo. Al eliminar
+     cuenta, borrar del disk.
+ 48. NUNCA guardar imágenes en la BD. Solo la ruta relativa en
+     users.foto_perfil. El archivo va en storage/app/public/avatares/ (dev)
+     o en el bucket S3/R2 (prod). Ver §17.
+ 49. En desarrollo, correr `php artisan storage:link` después de clonar el
+     repo. Sin esto, las fotos suben pero el navegador da 403/404.
+     Windows: si falla, mklink /J public\storage storage\app\public.
+ 50. Cada dev tiene sus propias fotos subidas (no se versionan).
+ 51. Accessor avatar_url: en dev devuelve URL relativa (/storage/...)
+     para evitar CSP + host mismatch. En prod S3 devuelve la URL del
+     bucket. El componente <x-user-avatar> acepta ambas.
+ 52. Al eliminar categorías del sistema: SOLO si gastos_count +
+     gastos_fijos_count = 0. Usar COUNT. Auditar como categoria.eliminar
+     con antes={nombre,bloque}.
+ 53. El botón "Eliminar" en admin/categorias debe estar deshabilitado con
+     tooltip si la categoría tiene referencias. El backend también lo
+     bloquea (defensa en profundidad).
+ 54. No añadir autoreset de localStorage en código de producción.
 
 ----------------------------------------------------------------------
 16. DOCUMENTOS RELACIONADOS
@@ -1796,31 +1790,255 @@ Instrucciones nuevas (2026-10-22): #75..#80                          [NUEVO 2026
   J7_Administracion_Documentacion.txt
   J8_ServicioCuentas_Documentacion.txt
   J8_Dashboard_Documentacion.txt
-  J9_Checklist_Previo.txt (con procedimiento de backup completo) [ACTUALIZADO 2026-10-22]
+  J9_Checklist_Previo.txt
   Refinamiento_Visual_2026-10-14.txt
   V4_N4_Verificacion_Correo_2026-10-17.txt
   Pulido_2026-10-19.txt
   Iconos_Categoria_2026-10-20.txt
   Panel_Admin_2026-10-21.txt
-  J9_Seguridad_2026-10-22.txt .................................... (crear) qué
-                                                                   cambió en
-                                                                   auditoría,
-                                                                   notificaciones,
-                                                                   CSP, re-auth,
-                                                                   throttles, y
-                                                                   qué queda
-                                                                   pendiente
-                                                                   (2FA,
-                                                                   composer
-                                                                   audit, logs)
-                                                                   [NUEVO 2026-10-22]
+  J9_Seguridad_2026-10-22.txt
+  Onboarding_Tour_2026-10-22.txt ................................... (crear)
+  Admin_Elimina_Categorias_2026-10-22.txt ........................... (crear)
+  Foto_Perfil_y_Almacenamiento_2026-10-22.txt ....................... (crear)
   diagrama_tablas.png / .svg
   docs/backend/*.php
-  docs/juan/deploy.sh                                              [NUEVO 2026-10-22]
+  docs/juan/deploy.sh
   Plan_Jira_Cuentas_Claras.txt / .csv
   Guia_Tareas_Jira_Sprint2_en_adelante.txt
   .env.example
   README.txt (de la plantilla)
+
+----------------------------------------------------------------------
+17. ALMACENAMIENTO DE IMÁGENES: DESARROLLO Y PRODUCCIÓN
+----------------------------------------------------------------------
+
+Contexto
+-------
+Cuentas Claras guarda imágenes (hoy: avatares de perfil; mañana: adjuntos
+de gastos, comprobantes, etc.). La primera funcionalidad que usó esto es
+la foto de perfil (decisión #70). El código usa la abstracción de Laravel
+`Storage::disk('public')` y `$archivo->store('avatares', 'public')`,
+por lo que la ubicación física del archivo la decide
+`config/filesystems.php`, NO el controller.
+
+BD vs disco
+-----------
+  · En la BD SOLO se guarda el path relativo: users.foto_perfil
+    = "avatares/abc123.jpg". NUNCA la imagen.
+  · El archivo real vive en el disk (dev: storage/app/public/; prod: bucket
+    S3/R2).
+  · Motivos para no guardar imágenes en la BD:
+    - Una imagen de 2 MB en un BLOB hace que cada SELECT del usuario
+      cargue 2 MB innecesarios.
+    - El dump de la BD crece de MB a GB.
+    - El navegador no puede cachear imágenes que vienen dentro de un SELECT.
+    - No se puede servir desde CDN.
+    - Cada imagen descargada consume una conexión de BD.
+
+DESARROLLO (local)
+------------------
+  Disk: 'public' → storage/app/public/.
+  URL pública: /storage/avatares/abc.jpg.
+  Requisito: symlink public/storage → storage/app/public.
+
+  Setup único:
+    php artisan storage:link
+    # Windows si falla el symlink:
+    rmdir public\storage 2>nul
+    mklink /J public\storage storage\app\public
+
+  Verificar:
+    ls -la public/storage
+    # debe ser un symlink a ../storage/app/public
+
+  El accessor User::avatar_url devuelve URL RELATIVA:
+    return '/' . 'storage/' . ltrim($this->foto_perfil, '/');
+    → /storage/avatares/abc.jpg
+
+  Motivo de la URL relativa:
+    - 'self' de la CSP matchea contra el origen de la página.
+    - Si el usuario entra por http://localhost:8000 y Storage::url()
+      genera http://127.0.0.1:8000/storage/..., el origen es DISTINTO
+      y la CSP bloquea la imagen (CSP: img-src 'self' data: https:).
+    - Con URL relativa, el navegador la resuelve contra el origen actual,
+      sea localhost, 127.0.0.1 o el dominio real en prod.
+    - No requiere tocar .env, ni CSP, ni APP_URL.
+
+  Variables de .env relevantes:
+    APP_URL=http://127.0.0.1:8000   (o el host que uses en el navegador)
+    FILESYSTEM_DISK=local           (el default; el disk 'public' es
+                                     explícito en el código)
+    FILESYSTEM_URL=                 (vacío; Laravel usa el path del disk)
+
+  Windows + Herd + artisan serve:
+    - `php artisan storage:link` a veces crea una copia en vez de symlink.
+      Verificar con `dir public\storage` que diga <JUNCTION> o <SYMLINKD>.
+    - Si dice <DIR> (carpeta normal), las fotos subidas nuevas NO se van a
+      ver: recrear con `mklink /J`.
+    - Si aún así da 403/404, la alternativa robusta es mover los archivos
+      a public/uploads/ (ver "Fallback" abajo).
+
+PRODUCCIÓN (S3/R2 y equivalentes)
+----------------------------------
+  Disk: 's3' o 'r2' → bucket del proveedor (S3, Cloudflare R2,
+       DigitalOcean Spaces, Backblaze B2, MinIO self-hosted).
+
+  Opciones recomendadas:
+    1. Cloudflare R2: no cobra egress (tráfico de salida). Es lo más
+       económico para apps con muchas lecturas de imágenes.
+    2. Amazon S3: estándar de la industria, integración perfecta con
+       Laravel.
+    3. DigitalOcean Spaces / Backblaze B2: alternativas más baratas.
+    4. MinIO: si la app corre on-premise con servidor propio.
+
+  Ventajas sobre disco local en VPS:
+    - Escalable: no te preocupas por el tamaño del disco.
+    - Rendimiento: CDN integrado (R2/S3 lo traen).
+    - Seguridad: los archivos no se ejecutan en el servidor web.
+    - Desacoplamiento: los archivos persisten si el servidor se reemplaza.
+    - Multi-servidor: todos los nodos leen el mismo bucket.
+
+  Setup (ejemplo con Cloudflare R2, equivalente para S3):
+
+    1. Crear el bucket en el panel del proveedor (público en lectura).
+
+    2. Instalar el adapter de S3 (compatible con R2):
+       php /c/Users/juane/.config/herd-lite/bin/composer.phar require
+         league/flysystem-aws-s3-v3 "^3.0"
+
+    3. config/filesystems.php → agregar disk 'r2':
+       'r2' => [
+           'driver'                  => 's3',
+           'key'                     => env('R2_ACCESS_KEY_ID'),
+           'secret'                  => env('R2_SECRET_ACCESS_KEY'),
+           'region'                  => 'auto',
+           'bucket'                  => env('R2_BUCKET'),
+           'url'                     => env('R2_URL'),
+           'endpoint'                => env('R2_ENDPOINT'),
+           'use_path_style_endpoint' => true,
+           'throw'                   => true,
+       ],
+
+    4. .env en producción:
+       R2_ACCESS_KEY_ID=...
+       R2_SECRET_ACCESS_KEY=...
+       R2_BUCKET=cuentas-claras-avatares
+       R2_URL=https://pub-xxxxx.r2.dev
+       R2_ENDPOINT=https://xxxxx.r2.cloudflarestorage.com
+
+    5. config/filesystems.php → apuntar el disk 'public' a 's3' o 'r2'.
+       Opción A (recomendada): cambiar el contenido del disk 'public' para
+       que use driver 's3' con las credenciales del bucket:
+         'public' => [
+             'driver' => 's3',
+             'key'    => env('R2_ACCESS_KEY_ID'),
+             // ...
+         ],
+       Con esto, el código existente (`Storage::disk('public')`) NO cambia.
+       Esta es la magia de la abstracción de Laravel.
+
+       Opción B: mantener disk 'public' local y crear disk 'r2', cambiando
+       el código a Storage::disk('r2'). NO recomendado (acopla el código
+       al proveedor).
+
+    6. El accessor User::avatar_url debe detectar prod y devolver la URL
+       COMPLETA del bucket:
+         public function getAvatarUrlAttribute(): ?string
+         {
+             if (!$this->foto_perfil) return null;
+             if (!Storage::disk('public')->exists($this->foto_perfil)) return null;
+             // En dev: '/storage/avatares/abc.jpg' (relativa)
+             // En prod S3: 'https://pub-xxxxx.r2.dev/avatares/abc.jpg'
+             return Storage::disk('public')->url($this->foto_perfil);
+         }
+       Ojo: `Storage::disk('public')->url()` con driver s3 devuelve la URL
+       completa automáticamente. Con driver local devuelve '/storage/...'
+       si el disk tiene 'url' => env('APP_URL').'/storage' configurado,
+       o una URL absoluta con APP_URL si no lo tiene. Por eso en dev
+       preferimos URL relativa (ver "Motivo de la URL relativa" arriba).
+       Solución unificada: en producción, llamar directamente
+       ->url() (que da la URL del bucket); en dev, devolver la relativa
+       concatenada manualmente. Se puede resolver con un if
+       (app()->environment('local')).
+
+    7. CSP: la cabecera actual (img-src 'self' data: https:) cubre S3/R2
+       porque usan HTTPS. NO requiere modificar SecurityHeaders al migrar.
+       Si en el futuro se usa un bucket por HTTP (no recomendado), habría
+       que añadirlo explícitamente.
+
+    8. Backups: los archivos viven en el bucket, no en el servidor. El
+       backup del bucket lo gestiona el proveedor (versionado, reglas de
+       ciclo de vida). El backup de la BD sigue siendo el script
+       backup-cuentas-claras.sh (o equivalente).
+
+    9. deploy.sh: si se usa S3/R2, NO ejecutar `php artisan storage:link`
+       (no aplica). El archivo va directo al bucket.
+
+    10. Migración de archivos existentes (de dev local a prod S3):
+        - Opción A: borrar todos los avatares de dev, subir a prod y pedir
+          a los usuarios que vuelvan a subir su foto.
+        - Opción B: script con `aws s3 sync` o `rclone`:
+            aws s3 sync storage/app/public/avatares/ s3://bucket/avatares/
+        - Opción C: rclone (compatible con R2):
+            rclone sync storage/app/public/avatares/ r2:bucket/avatares/
+
+VPS simple (sin S3/R2)
+----------------------
+  Si el proyecto se queda en un solo servidor (VPS) y no hay necesidad de
+  escalar:
+
+    1. Correr `php artisan storage:link` en el servidor (crea el symlink
+       real, Linux lo soporta sin trucos).
+    2. Permisos correctos (usuario www-data o el del servidor web):
+         sudo chown -R www-data:www-data storage bootstrap/cache
+         sudo find storage -type d -exec chmod 775 {} \;
+         sudo find storage -type f -exec chmod 664 {} \;
+    3. APP_URL=https://cuentasclaras.com (dominio real con HTTPS).
+    4. Backups: incluir storage/app/public/ en el backup (además de la BD).
+       El script backup-cuentas-claras.sh debe empaquetar
+       storage/app/public/avatares/ junto con el dump de la BD.
+
+Fallback (Windows + artisan serve + symlink roto)
+-------------------------------------------------
+  Si el symlink no funciona en Windows con artisan serve:
+
+    1. Cambiar el `store()` en AjustesController@actualizarPerfil:
+       $nombre = uniqid('av_') . '.' . $foto->getClientOriginalExtension();
+       $foto->move(public_path('uploads/avatares'), $nombre);
+       $usuario->foto_perfil = 'uploads/avatares/' . $nombre;
+
+    2. Cambiar el accessor avatar_url:
+       if (!$this->foto_perfil) return null;
+       if (!is_file(public_path($this->foto_perfil))) return null;
+       return '/' . ltrim($this->foto_perfil, '/');
+
+    3. Cambiar ServicioCuentas::eliminarCuenta:
+       if ($usuario->foto_perfil && is_file(public_path($usuario->foto_perfil))) {
+           @unlink(public_path($usuario->foto_perfil));
+       }
+
+    4. mkdir public/uploads/avatares
+    5. Re-subir la foto.
+
+  Desventaja: no es portable a producción con S3. Solo si el proyecto es
+  escolar y se queda en Windows local.
+
+Checklist al migrar a producción con S3/R2
+------------------------------------------
+  [ ] Crear bucket + configurar CORS (si aplica) + permisos públicos de
+      lectura.
+  [ ] composer require league/flysystem-aws-s3-v3.
+  [ ] Configurar .env (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET,
+      R2_URL, R2_ENDPOINT).
+  [ ] Cambiar config/filesystems.php: disk 'public' con driver 's3'.
+  [ ] Ajustar accessor avatar_url para devolver ->url() en producción.
+  [ ] Verificar CSP: img-src 'self' data: https: (ya cubre el bucket).
+  [ ] Migrar archivos existentes con rclone/aws s3 sync.
+  [ ] deploy.sh: NO ejecutar storage:link.
+  [ ] Probar: subir foto, ver foto en topbar, eliminar foto, eliminar
+      cuenta.
+  [ ] Backup del bucket: configurar versionado o lifecycle.
+  [ ] Documentar en docs/juan/backups.md.
 
 ======================================================================
 FIN DEL DOCUMENTO

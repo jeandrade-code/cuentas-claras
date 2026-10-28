@@ -11,6 +11,19 @@
 
     {{-- Cabecera --}}
     <header>
+      {{-- Errores globales (incluye el de "categoría en uso" al intentar eliminar) --}}
+      @if ($errors->any())
+        <div class="card p-space-md" style="background: var(--error-container, #fee2e2); color: var(--on-error-container, #7f1d1d);" role="alert">
+          <div class="flex items-start gap-space-sm">
+            <span class="material-symbols-outlined text-[20px]">error</span>
+            <ul class="list-disc pl-5 space-y-1 font-body-sm text-body-sm">
+              @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+              @endforeach
+            </ul>
+          </div>
+        </div>
+      @endif
       <h1 class="font-headline-xl text-headline-xl text-on-surface">
         Categorías del sistema
       </h1>
@@ -20,7 +33,7 @@
     </header>
 
     {{-- Aviso contextual --}}
-    <section class="card p-space-md admin-aviso">
+    <section class="card p-space-md admin-aviso" data-tour="admin-cat-aviso">
       <div class="flex items-start gap-space-sm">
         <span class="material-symbols-outlined text-[20px] admin-aviso__icono">info</span>
         <div class="text-on-surface-variant font-body-sm text-body-sm leading-relaxed">
@@ -40,7 +53,7 @@
     </section>
 
     {{-- Resumen --}}
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-space-md">
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-space-md" data-tour="admin-cat-resumen">
       <div class="card p-space-md">
         <p class="text-on-surface-variant font-label-md text-label-md">Total categorías</p>
         <p class="font-numeric-lg text-numeric-lg text-on-surface mt-2">{{ $resumen['total'] }}</p>
@@ -56,7 +69,7 @@
     </section>
 
     {{-- Crear categoría --}}
-    <section class="card p-space-lg">
+    <section class="card p-space-lg" data-tour="admin-cat-crear">
       <h2 class="font-headline-md text-headline-md text-on-surface mb-space-xs">
         Crear nueva categoría
       </h2>
@@ -140,6 +153,7 @@
     </section>
     
     {{-- Categorías agrupadas por bloque --}}
+    <div data-tour="admin-cat-lista">
     @foreach ($bloques as $clave => $info)
       @php
         $categoriasDelBloque = $categorias->where('bloque', $clave);
@@ -306,10 +320,70 @@
                   </form>
                 </details>
               </div>
+              {{-- Eliminar (solo si no está en uso) --}}
+              @php
+                  $enUso = ($cat->gastos_count + $cat->gastos_fijos_count) > 0;
+              @endphp
+
+              @if ($enUso)
+                  <button type="button"
+                          class="btn btn-danger"
+                          disabled
+                          title="No se puede eliminar: está en uso ({{ $cat->gastos_count }} {{ $cat->gastos_count === 1 ? 'gasto' : 'gastos' }}, {{ $cat->gastos_fijos_count }} {{ $cat->gastos_fijos_count === 1 ? 'gasto fijo' : 'gastos fijos' }}). Desactívala en su lugar.">
+                      <span class="material-symbols-outlined text-[16px]">delete</span>
+                      <span>Eliminar</span>
+                  </button>
+              @else
+                  <button type="button"
+                          class="btn btn-danger"
+                          onclick="document.getElementById('modal-eliminar-{{ $cat->id }}').showModal()">
+                      <span class="material-symbols-outlined text-[16px]">delete</span>
+                      <span>Eliminar</span>
+                  </button>
+
+                  <dialog id="modal-eliminar-{{ $cat->id }}" class="admin-modal">
+                      <form method="POST"
+                            action="{{ route('admin.categorias.destroy', $cat) }}"
+                            class="admin-modal__form">
+                          @csrf
+                          @method('DELETE')
+
+                          <h3 class="admin-modal__titulo">
+                              Eliminar "{{ $cat->nombre }}"
+                          </h3>
+                          <p class="admin-modal__texto">
+                              Esta acción no se puede deshacer. La categoría se eliminará del sistema y
+                              dejará de aparecer en el listado global. Confirma con tu contraseña.
+                          </p>
+
+                          <label class="admin-modal__label" for="password-eliminar-{{ $cat->id }}">
+                              Tu contraseña
+                          </label>
+                          <input type="password"
+                                id="password-eliminar-{{ $cat->id }}"
+                                name="password"
+                                required
+                                autocomplete="current-password"
+                                class="input w-full">
+
+                          <div class="admin-modal__acciones">
+                              <button type="button"
+                                      class="btn btn-secondary"
+                                      onclick="document.getElementById('modal-eliminar-{{ $cat->id }}').close()">
+                                  Cancelar
+                              </button>
+                              <button type="submit" class="btn btn-danger">
+                                  <span class="material-symbols-outlined text-[16px]">delete_forever</span>
+                                  <span>Eliminar categoría</span>
+                              </button>
+                          </div>
+                      </form>
+                  </dialog>
+              @endif
             </div>
           </article>
         @empty
-          <p class="font-body-md text-body-md text-on-surface-variant py-space-md">
+          <p class="font-body-md text-body-md text-on-surface-variant py-space-md px-10">
             No hay categorías en este bloque.
           </p>
         @endforelse
@@ -326,6 +400,7 @@
       </p>
     </section>
 
+  </div>
   </div>
 </main>
 @endsection
