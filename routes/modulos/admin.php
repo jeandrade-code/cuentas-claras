@@ -15,7 +15,11 @@ use App\Http\Controllers\Admin\AuditoriaController;
  * 2026-10-21: se agrega /admin/panel (admin.panel) como dashboard principal
  * del administrador. Decisión #60. El Grupo E pasa de 9 a 10 rutas.
  *
- * Total proyecto: 67 rutas (11 + 9 + 37 + 0 + 10) + Route::fallback().
+ * 2026-10-22: se agrega DELETE /admin/categorias/{categoria}
+ * (admin.categorias.destroy) con re-auth (current_password) y throttle.
+ * Decisión #68. El Grupo E pasa de 10 a 11 rutas.
+ *
+ * Total proyecto: 68 rutas (11 + 9 + 37 + 0 + 11) + Route::fallback().
  */
 
 // Panel (dashboard del admin). Pantalla principal del rol administrador.
@@ -32,6 +36,9 @@ Route::get('/categorias', [CategoriaSistemaController::class, 'index'])->name('c
 Route::post('/categorias', [CategoriaSistemaController::class, 'store'])->name('categorias.store');
 Route::put('/categorias/{categoria}', [CategoriaSistemaController::class, 'update'])->name('categorias.update');
 Route::patch('/categorias/{categoria}/desactivar', [CategoriaSistemaController::class, 'desactivar'])->name('categorias.desactivar');
+Route::delete('/categorias/{categoria}', [CategoriaSistemaController::class, 'destroy'])
+    ->middleware('throttle:30,1')
+    ->name('categorias.destroy');
 
 Route::get('/estadisticas', [EstadisticaController::class, 'index'])->name('estadisticas');
 

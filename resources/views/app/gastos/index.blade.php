@@ -2,7 +2,7 @@
 
 @section('content')
     <div class="container mx-auto px-4 py-6">
-
+        <!-- ... (Mensajes de error y éxito) ... -->
         @if (session('exito'))
             <div class="bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded-xl mb-6">
                 {{ session('exito') }}
@@ -29,7 +29,7 @@
         </div>
 
 <!-- Formulario para Registrar Nuevo Gasto -->
-<div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-8">
+<div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mb-8" data-tour="gastos-form">
     <h2 class="text-lg font-bold text-gray-800 mb-4">Registrar Nuevo Gasto</h2>
 
     <form id="formularioGasto"
@@ -235,7 +235,7 @@
 
 
         <!-- Tarjetas de Resumen -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8" data-tour="gastos-resumen">
             <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
                 <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">TOTAL GASTADO (ESTE MES)</p>
                 <h3 class="text-2xl font-extrabold text-red-600 mt-1">$ {{ number_format($totalMes, 0, ',', '.') }}</h3>
@@ -247,7 +247,7 @@
         </div>
 
         <!-- Tabla de Registros Reales -->
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden" data-tour="gastos-tabla">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -317,4 +317,5 @@
         </div>
 
     </div>
+    <x-onboarding-tour name="gastos" :auto-start="true" />
 @endsection

@@ -22,6 +22,11 @@ IMÁGENES (3):
 
 @extends('layouts.publico')
 @section('titulo', 'Tus finanzas en orden · Cuentas Claras')
+
+<!-- Seo -->
+@section('meta_description', 'Pon en orden tus gastos y alcanza tus metas. Registra gastos, recibe alertas de pagos, simula créditos y ahorra en pareja. 100% gratis y sin conectar tu banco.')
+@section('meta_image', asset('img/meta-couple.jpg'))
+
 @push('styles')
   <link rel="stylesheet" href="{{ asset('css/landing-page.css') }}">
 @endpush
@@ -39,17 +44,17 @@ IMÁGENES (3):
     $user = auth()->user();
 
     $modo = match (true) {
-        ! $user                        => 'anonimo',
-        $user->rol === 'administrador' => 'admin',
-        $user->rol === 'familiar'      => 'familiar',
-        default                        => 'estandar',
+      !$user => 'anonimo',
+      $user->rol === 'administrador' => 'admin',
+      $user->rol === 'familiar' => 'familiar',
+      default => 'estandar',
     };
 
     // Par de imágenes del hero (la primera es la activa inicial).
     [$heroImgA, $heroImgB] = match ($modo) {
-        'familiar' => ['img/hero-main_morado.jpg', 'img/hero-main-2_morado.jpg'],
-        'admin'    => ['img/hero-main_azul.jpg',   'img/hero-main-2_azul.jpg'],
-        default    => ['img/hero-main.jpg',        'img/hero-main-2.jpg'],
+      'familiar' => ['img/hero-main_morado.jpg', 'img/hero-main-2_morado.jpg'],
+      'admin' => ['img/hero-main_azul.jpg', 'img/hero-main-2_azul.jpg'],
+      default => ['img/hero-main.jpg', 'img/hero-main-2.jpg'],
     };
   @endphp
 
@@ -76,10 +81,9 @@ IMÁGENES (3):
           <div class="relative w-[800px] max-w-full">
             <div class="lp-hero-bg" aria-hidden="true">
               {{-- Las dos fotos se alternan solas con un fundido (sin botones). Ambas se voltean por CSS. --}}
-              <img class="lp-img is-active" src="{{ asset($heroImgA) }}" alt="" width="1264" height="843"
-                decoding="async" fetchpriority="high">
-              <img class="lp-img" src="{{ asset($heroImgB) }}" alt="" width="1264" height="843"
-                decoding="async">
+              <img class="lp-img is-active" src="{{ asset($heroImgA) }}" alt="" width="1264" height="843" decoding="async"
+                fetchpriority="high">
+              <img class="lp-img" src="{{ asset($heroImgB) }}" alt="" width="1264" height="843" decoding="async">
             </div>
 
             {{-- Tarjetas flotantes posicionadas en % sobre la foto --}}
@@ -926,8 +930,7 @@ IMÁGENES (3):
               </div>
               <div class="flex items-start gap-4 mt-9 px-2">
                 {{-- CAMBIO 13: icono work -> bg-want text-on-want --}}
-                <div
-                  class="w-12 h-12 rounded-full bg-want text-on-want flex items-center justify-center shrink-0">
+                <div class="w-12 h-12 rounded-full bg-want text-on-want flex items-center justify-center shrink-0">
                   <span class="material-symbols-outlined text-[24px]">work</span>
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -1163,12 +1166,12 @@ IMÁGENES (3):
       <!-- CTA FINAL -->
       <!-- ============================================================== -->
       <section class="w-full pt-12 bg-surface pb-8">
-        <div class="max-w-7xl mx-auto px-margin">
+        <div class="">
           <div
-            class="lp-reveal lp-reveal--zoom relative rounded-3xl bg-inverse-surface text-inverse-on-surface overflow-hidden p-10 sm:p-16 lg:py-20 lg:pl-20 flex flex-col items-center text-center lg:items-start lg:text-left shadow-xl">
+            class="lp-reveal lp-reveal--zoom relative bg-inverse-surface text-inverse-on-surface overflow-hidden p-10 sm:p-16 lg:py-20 lg:pl-40 flex flex-col items-center text-center lg:items-start lg:text-left shadow-xl">
 
             {{-- IMAGEN #3: pareja planeando, lado derecho con máscara --}}
-            <div class="lp-cta-bg absolute top-0 -right-16 inset-y-0 right-0 w-full lg:w-[62%] pointer-events-none"
+            <div class="lp-cta-bg absolute -top-16 inset-y-0 right-0 w-full lg:w-[62%] pointer-events-none"
               aria-hidden="true">
               <img class="lp-img" src="{{ asset('img/cuenta-familiar.jpg') }}" alt="" width="1200" height="800"
                 loading="lazy" decoding="async">
@@ -1207,10 +1210,28 @@ IMÁGENES (3):
 
     </div>
   </main>
-
-  <script src="{{ asset('js/landing-page.js') }}" defer></script>
 @endsection
 
 @push('scripts')
+  <script src="{{ asset('js/landing-page.js') }}" defer></script>
+
+  @verbatim
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Cuentas Claras",
+    "operatingSystem": "Web",
+    "applicationCategory": "FinanceApplication",
+    "description": "Plataforma web para la administración de finanzas personales, simulación de créditos y metas de ahorro compartidas.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "COP"
+    }
+  }
+  </script>
+  @endverbatim
+
   <script src="{{ asset('js/landing-header.js') }}" defer></script>
 @endpush

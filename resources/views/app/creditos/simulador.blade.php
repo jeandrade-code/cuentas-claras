@@ -54,7 +54,7 @@
         {{-- ============================================================= --}}
         {{-- FORMULARIO --}}
         {{-- ============================================================= --}}
-        <div class="xl:col-span-7">
+        <div class="xl:col-span-7" data-tour="sim-form">
 
           <div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
 
@@ -380,7 +380,7 @@
         {{-- ============================================================= --}}
         {{-- RESULTADOS --}}
         {{-- ============================================================= --}}
-        <div class="xl:col-span-5">
+        <div class="xl:col-span-5" data-tour="sim-resultados">
 
           <div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
 
@@ -542,7 +542,7 @@
       {{-- ============================================================= --}}
       {{-- TABLA DE AMORTIZACIÓN --}}
       {{-- ============================================================= --}}
-      <div class="mt-8 bg-surface-container-lowest rounded-xl p-space-lg shadow-sm">
+      <div class="mt-8 bg-surface-container-lowest rounded-xl p-space-lg shadow-sm" data-tour="sim-tabla">
 
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4">
 
@@ -654,6 +654,8 @@
 
     </div>
   </main>
+  {{-- ONBOARDING TOUR --}}
+  <x-onboarding-tour name="simulador" :auto-start="true" />
 @endsection
 
 @push('scripts')

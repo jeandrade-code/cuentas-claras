@@ -1,0 +1,289 @@
+/*
+ * ==============================================================================
+ * ARCHIVO : public/css/onboarding.css
+ * QUÉ ES  : Estilos del tour guiado (onboarding). Desktop + mobile.
+ * ==============================================================================
+ */
+
+/* =========================================================================
+   1. Capa del tour
+   ========================================================================= */
+.cc-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.cc-tour__blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: auto;
+  background: transparent;
+}
+
+/* Neutralizar transform del body/html mientras el tour está activo.
+   Un transform residual (de transiciones.css) rompe position:fixed. */
+html.cc-tour-active,
+html.cc-tour-active body {
+  transform: none !important;
+  filter: none !important;
+  perspective: none !important;
+  will-change: auto !important;
+}
+
+.cc-tour__spot {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 9999px rgba(8, 12, 24, 0.82),
+    0 0 0 3px color-mix(in srgb, var(--accent, var(--primary)) 70%, transparent),
+    0 0 32px 6px color-mix(in srgb, var(--accent, var(--primary)) 35%, transparent);
+}
+
+.cc-tour__spot:not(.cc-tour__spot--full)::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid color-mix(in srgb, var(--accent, var(--primary)) 60%, transparent);
+  animation: cc-tour-pulse 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes cc-tour-pulse {
+  0%   { transform: scale(1);    opacity: .8; }
+  100% { transform: scale(1.08); opacity: 0; }
+}
+
+/* Pantalla completa (paso sin target). */
+.cc-tour__spot--full {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: rgba(8, 12, 24, 0.82);
+  box-shadow: none;
+  border: none;
+}
+.cc-tour__spot--full::after { display: none; }
+
+/* =========================================================================
+   2. Tooltip (base para desktop Y mobile)
+   ========================================================================= */
+.cc-tour__tip {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: auto;
+  width: min(380px, calc(100vw - 32px));
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 48px -12px rgba(15,23,42,.28),
+    0 8px 16px -8px rgba(15,23,42,.16);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  overflow: hidden;
+}
+
+/* Animación solo al entrar al paso, sin transform residual. */
+.cc-tour__tip--entering {
+  animation: cc-tour-in .26s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes cc-tour-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+[data-theme="oscuro"] .cc-tour__tip {
+  background: var(--surface-container);
+  box-shadow:
+    0 24px 48px -12px rgba(0,0,0,.6),
+    0 8px 16px -8px rgba(0,0,0,.4);
+}
+
+/* Barra de progreso */
+.cc-tour__bar {
+  height: 3px;
+  background: color-mix(in srgb, var(--accent, var(--primary)) 15%, transparent);
+  overflow: hidden;
+}
+.cc-tour__bar-fill {
+  height: 100%;
+  background: var(--accent, var(--primary));
+  width: 0;
+  transition: width .3s ease;
+}
+
+/* Cabecera */
+.cc-tour__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+.cc-tour__step {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent, var(--primary));
+}
+.cc-tour__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--on-surface-variant);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+.cc-tour__close:hover {
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+}
+.cc-tour__close .material-symbols-outlined { font-size: 18px; }
+
+/* Cuerpo */
+.cc-tour__body { padding: 8px 16px 16px; }
+.cc-tour__title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+.cc-tour__text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--on-surface-variant);
+}
+
+/* Footer */
+.cc-tour__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 35%, transparent);
+  background: color-mix(in srgb, var(--surface-container-low) 60%, transparent);
+}
+.cc-tour__skip {
+  background: transparent;
+  border: 0;
+  padding: 6px 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.cc-tour__skip:hover {
+  color: var(--on-surface);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cc-tour__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cc-tour__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+}
+.cc-tour__btn:active { transform: scale(.97); }
+.cc-tour__btn--primary {
+  background: var(--accent, var(--primary));
+  color: var(--accent-on, var(--on-primary));
+}
+.cc-tour__btn--primary:hover { filter: brightness(1.06); }
+.cc-tour__btn--ghost {
+  background: transparent;
+  color: var(--on-surface);
+  border-color: color-mix(in srgb, var(--outline-variant) 70%, transparent);
+}
+.cc-tour__btn--ghost:hover {
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+}
+.cc-tour__btn:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+.cc-tour__btn .material-symbols-outlined { font-size: 16px; }
+
+/* =========================================================================
+   3. Mobile: MISMO posicionamiento que desktop (top/left desde JS),
+      pero con sizing y touch targets adaptados. NO es bottom sheet.
+   ========================================================================= */
+@media (max-width: 767px), (max-height: 500px) and (max-width: 1024px) {
+  /* Ancho responsivo. El JS decide top/left igual que en desktop. */
+  .cc-tour__tip {
+    width: min(340px, calc(100vw - 24px));
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+
+  /* Si el contenido es alto, solo el body scrollea. */
+  .cc-tour__body {
+    max-height: calc(100vh - 220px);
+    max-height: calc(100dvh - 220px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Touch targets ≥44px (Apple HIG). */
+  .cc-tour__close {
+    width: 36px;
+    height: 36px;
+  }
+  .cc-tour__btn {
+    height: 44px;
+    font-size: 14px;
+    padding: 0 16px;
+  }
+  .cc-tour__skip {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+  .cc-tour__title { font-size: 17px; }
+  .cc-tour__text  { font-size: 14.5px; }
+
+  /* Footer en fila: Anterior / Siguiente a los lados, Omitir a la izquierda. */
+  .cc-tour__foot {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+  }
+  .cc-tour__nav {
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+  .cc-tour__skip {
+    flex: 0 0 auto;
+    order: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-tour__tip--entering { animation: none; }
+  .cc-tour__bar-fill { transition: none; }
+  .cc-tour__spot::after { animation: none; }
+}

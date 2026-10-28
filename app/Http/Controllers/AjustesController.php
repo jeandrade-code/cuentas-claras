@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-
+use Illuminate\Support\Facades\Storage;
 /**
  * 2026-10-22 (J9): notifica email.changed al correo ANTERIOR tras confirmar
  *                  el cambio de correo (para detectar ataques).
@@ -38,38 +38,74 @@ class AjustesController extends Controller
         ]);
     }
 
-    public function actualizarPerfil(UpdatePerfilRequest $request): RedirectResponse
+    public function actualizarPerfil(UpdatePerfilRequest $request)
     {
         $usuario = $request->user();
-        $datos = $request->validated();
         $esAdmin = $usuario->rol === 'administrador';
-        $mensaje = 'Tu perfil se actualizó correctamente.';
 
-        $usuario->nombre = $datos['nombre'];
+        $datos = $request->validated();
 
-        if (!$esAdmin) {
-            $usuario->ingreso_mensual = $datos['ingreso_mensual'] ?? null;
+        // ── FOTO PERFIL: extraer del array validado ─────────────────────────
+        // Importante: hay que sacarlos de $datos porque UploadedFile no es
+        // asignable en masa. Los manejamos aparte al final.
+        $foto = $datos['foto_perfil'] ?? null;
+        $eliminar = (bool) ($datos['eliminar_foto'] ?? false);
+        unset($datos['foto_perfil'], $datos['eliminar_foto']);
+        // ────────────────────────────────────────────────────────────────────
+
+        // 1) ¿Cambia el correo? Delegar en ServicioCuentas (ya lo haces).
+        $emailNuevo = strtolower(trim((string) ($datos['email'] ?? '')));
+        $cambiaEmail = $emailNuevo !== '' && $emailNuevo !== $usuario->email;
+
+        if ($cambiaEmail) {
+            app(\App\Services\ServicioCuentas::class)
+                ->solicitarCambioCorreo($usuario, $emailNuevo);
+            unset($datos['email']); // no lo toques aquí; el servicio ya lo manejó
         }
 
+        // 2) ¿Cambia la contraseña? Hashear (ya lo haces, lo dejo por claridad).
         if (!empty($datos['nueva_contrasena'])) {
-            $usuario->password = Hash::make($datos['nueva_contrasena']);
+            $usuario->password = \Hash::make($datos['nueva_contrasena']);
+            unset($datos['nueva_contrasena']);
         }
+        unset($datos['contrasena_actual'], $datos['nueva_contrasena_confirmation']);
 
+        // 3) Asignar campos de texto (nombre, ingreso_mensual si aplica, etc.)
+        //    Si usas fill()/update() con $datos ya limpios (sin foto ni password),
+        //    está bien. Si prefieres uno a uno, hazlo también.
+        if ($esAdmin) {
+            unset($datos['ingreso_mensual']); // ya lo filtra el Request, refuerzo
+        }
+        $usuario->fill($datos);
+
+        // 4) ── FOTO PERFIL: aplicar nueva o borrar la existente ────────────
+        if ($foto) {
+            // Borrar la anterior si existía
+            if ($usuario->foto_perfil && Storage::disk('public')->exists($usuario->foto_perfil)) {
+                Storage::disk('public')->delete($usuario->foto_perfil);
+            }
+
+            // Guardar la nueva en storage/app/public/avatares/
+            // store() genera un nombre aleatorio (hash) y devuelve la ruta relativa.
+            $usuario->foto_perfil = $foto->store('avatares', 'public');
+        } elseif ($eliminar) {
+            // El usuario marcó "Eliminar foto actual"
+            if ($usuario->foto_perfil && Storage::disk('public')->exists($usuario->foto_perfil)) {
+                Storage::disk('public')->delete($usuario->foto_perfil);
+            }
+            $usuario->foto_perfil = null;
+        }
+        // ────────────────────────────────────────────────────────────────────
+
+        // 5) Guardar
         $usuario->save();
 
-        $emailNuevo = strtolower(trim($datos['email']));
-        if ($emailNuevo !== $usuario->email) {
-            try {
-                $this->cuentas->solicitarCambioCorreo($usuario, $emailNuevo);
-                $mensaje = 'Perfil actualizado. Revisa tu nuevo correo para confirmar el cambio.';
-            } catch (ValidationException $e) {
-                return back()->withErrors($e->errors())->withInput();
-            }
-        }
-
+        // 6) Redirección con mensaje (ajusta al que ya uses)
         return redirect()
             ->route('ajustes.perfil')
-            ->with('exito', $mensaje);
+            ->with('exito', $cambiaEmail
+                ? 'Perfil actualizado. Revisa tu nuevo correo para confirmar el cambio.'
+                : 'Tu perfil se actualizó correctamente.');
     }
 
     public function reenviarConfirmacionCorreo(Request $request): RedirectResponse
@@ -107,14 +143,14 @@ class AjustesController extends Controller
         try {
             Notification::route('mail', $correoViejo)
                 ->notify(new AlertaSeguridad('email.changed', [
-                    'nombre'       => $nombreUsuario,
+                    'nombre' => $nombreUsuario,
                     'correo_nuevo' => $request->user()->email,
-                    'fecha'        => now()->format('Y-m-d H:i'),
+                    'fecha' => now()->format('Y-m-d H:i'),
                 ]));
         } catch (\Throwable $e) {
             Log::warning('No se pudo enviar alerta email.changed', [
                 'user_id' => $request->user()->id,
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
 

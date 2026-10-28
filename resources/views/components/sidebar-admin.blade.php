@@ -4,10 +4,12 @@ ARCHIVO : resources/views/components/sidebar-admin.blade.php
 QUÉ ES : Menú lateral del administrador. Uso: <x-sidebar-admin />
 ACTUALIZADO 2026-10-22:
 - Añadido ítem "Auditoría" (admin.auditoria).
+ACTUALIZADO (tour): data-tour="sidebar-admin" para el onboarding del admin.
 ==============================================================================
 --}}
 
-<aside
+{{-- TOUR: data-tour="sidebar-admin" permite que el onboarding resalte este bloque. --}}
+<aside data-tour="sidebar-admin"
   class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between py-space-lg px-space-md">
   <div class="flex flex-col gap-space-lg">
 

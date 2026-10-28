@@ -1,0 +1,1255 @@
+======================================================================
+PLAN DE ELIMINACIÓN DEL ROL "FAMILIAR"
+Proyecto: Cuentas Claras
+Documento: runbook de migración
+Fecha: 2026-10-22
+Autor: Juan (J9)
+Estado: PLANIFICADO (no ejecutado)
+Rama sugerida: feature/eliminar-rol-familiar
+Esfuerzo estimado: 4-6 horas
+Riesgo: ALTO (15-20 tests a reescribir, migración de datos, docs)
+======================================================================
+
+ÍNDICE
+------
+  1. Resumen ejecutivo
+  2. Motivación y advertencias
+  3. Impacto real (archivos y tests)
+  4. Plan de ejecución paso a paso
+  5. Migración de base de datos
+  6. Cambios en Modelo User
+  7. Cambios en routes/modulos/*.php
+  8. Cambios en RegistroController y Requests
+  9. Cambios en AjustesController y Requests
+ 10. Cambios en ServicioCuentas
+ 11. Cambios en ServicioMetas
+ 12. Cambios en ServicioNotificaciones
+ 13. Cambios en vistas
+ 14. Cambios en Factories y Seeders
+ 15. Cambios en Tests
+ 16. Cambios en documentación
+ 17. Rollback completo
+ 18. Verificación final
+ 19. Archivos a ELIMINAR
+ 20. Archivos que NO se tocan
+
+
+======================================================================
+1. RESUMEN EJECUTIVO
+======================================================================
+
+Objetivo: eliminar el rol "familiar" de la aplicación. Todos los usuarios
+existentes con rol "familiar" pasan a "estandar". Las metas compartidas
+siguen funcionando pero ahora cualquier usuario "estandar" puede crearlas,
+invitar y aceptar invitaciones. El rol "administrador" no se toca.
+
+Resultado final:
+  · Enum users.rol: estandar | administrador (familiar desaparece del código)
+  · Metas compartidas: cualquier estandar puede crear, invitar, aceptar
+  · Tipo de cuenta: el usuario ya no elige. Todo el registro es "estandar"
+  · Tinte visual: verde (estandar), azul (admin). El morado del "familiar"
+    deja de usarse (el CSS queda en theme.css por si se reactiva).
+  · El concepto "tipo de cuenta" desaparece de la UI.
+
+Antes (3 roles):                Después (2 roles):
+  - estandar                      - estandar (todas las funciones)
+  - familiar                      - administrador (solo admin)
+  - administrador
+
+Tests:
+  · Antes: 209 passing
+  · Después: ~195 passing (15-20 tests reescritos/eliminados)
+
+
+======================================================================
+2. MOTIVACIÓN Y ADVERTENCIAS
+======================================================================
+
+Por qué hacerlo:
+  · El rol "familiar" solo agrega 2 capacidades (crear metas compartidas,
+    aceptar invitaciones). Todo lo demás es idéntico al estandar.
+  · El usuario tiene que ir a Ajustes a cambiar de tipo para hacer algo
+    que ya debería poder hacer.
+  · Es fricción UX que no aporta valor de negocio (el producto no cobra
+    diferente por eso).
+
+ADVERTENCIAS:
+  · Esta es una decisión de producto, no de código. Debe ser aprobada
+    por el equipo (Juan + Nikol + Valeria).
+  · Es un one-way door. Reactivar "familiar" después implica reescribir
+    todo lo que se borre aquí.
+  · Contradice las decisiones documentadas #7, #18, #24 y el cierre del
+    J5 del 2026-10-08.
+  · Afecta la landing y el registro (N5, Nikol).
+  · Si algún usuario tiene una meta compartida activa al momento de la
+    migración, sigue funcionando, pero pierde la separación de roles.
+
+Alternativa recomendada (si no estás seguro): la Opción B documentada en
+el chat del 2026-10-22. El sistema auto-sube a "familiar" cuando el
+usuario quiere compartir una meta, sin que lo vea. Son 1-2 horas y no
+requiere migración. Esta Opción A es solo si quieres eliminar el rol
+por completo del código.
+
+
+======================================================================
+3. IMPACTO REAL
+======================================================================
+
+Archivos a MODIFICAR: ~20
+Archivos a ELIMINAR: 1 (ajustes/tipo-cuenta.blade.php)
+Migraciones NUEVAS: 1 (UPDATE users rol familiar→estandar)
+Tests a REESCRIBIR: ~15-20
+Documentos a ACTUALIZAR: 3
+
+Desglose:
+  · Migración ................................... 1 archivo nuevo
+  · Modelo User ................................. 1 archivo (borrar método)
+  · routes/web.php .............................. 1 archivo (5-6 cambios)
+  · routes/modulos/ajustes.php .................. 1 archivo (borrar 2 rutas)
+  · routes/modulos/admin.php .................... 1 archivo (0 cambios, revisar)
+  · RegistroController + StoreRegistroRequest ... 2 archivos
+  · AjustesController ........................... 1 archivo (borrar 2 métodos)
+  · ServicioCuentas ............................. 1 archivo (borrar cambiarTipo + validaciones)
+  · ServicioMetas ............................... 1 archivo (borrar validaciones familiar)
+  · ServicioNotificaciones ...................... 1 archivo (borrar tipo)
+  · Factories/UserFactory ....................... 1 archivo (borrar familiar())
+  · Seeders/UsuariosSeeder ...................... 1 archivo (remapear)
+  · Vistas (crear-usuario, metas/index,
+    _tabs, landing) ............................ 4 archivos
+  · Vistas a eliminar ........................... 1 archivo
+  · Tests (MetasTest, AjustesTest, PermisosTest,
+    DashboardTest, BaseDeDatosTest, PanelTest) . 6 archivos
+  · Docs (Arquitectura, DECISIONES, 00-rutas) ... 3 archivos
+
+
+======================================================================
+4. PLAN DE EJECUCIÓN PASO A PASO
+======================================================================
+
+PASO 0 - Preparación
+----------------------
+  git checkout main
+  git pull origin main
+  php artisan test                    # 209 passing, todos verdes
+  git checkout -b feature/eliminar-rol-familiar
+  php artisan route:clear
+  php artisan config:clear
+  php artisan view:clear
+
+
+PASO 1 - Migración de datos
+----------------------------
+  Crear migración (ver sección 5).
+  Ejecutar: php artisan migrate
+  Verificar: SELECT rol, COUNT(*) FROM users GROUP BY rol;
+  Debe mostrar: estandar | X  y  administrador | Y  (0 familiar)
+
+  NOTA: si hay metas compartidas activas entre dos usuarios que eran
+  "familiar", siguen activas después del UPDATE. Eso es correcto.
+
+
+PASO 2 - Modelo User
+---------------------
+  Ver sección 6.
+  Borrar método de tinte/ruta que diferencia familiar.
+  NO borrar el cast de rol ni la columna users.rol.
+
+
+PASO 3 - Rutas
+---------------
+  Ver sección 7.
+  · routes/web.php: cambiar 'rol:estandar,familiar' por 'rol:estandar'
+    en los 4 grupos afectados.
+  · routes/modulos/ajustes.php: borrar las 2 rutas de tipo-cuenta.
+
+
+PASO 4 - Registro
+------------------
+  Ver sección 8.
+  · RegistroController::store: eliminar la lectura de 'tipo_cuenta',
+    el rol siempre es 'estandar'.
+  · StoreRegistroRequest: quitar 'tipo_cuenta' de rules().
+
+
+PASO 5 - Ajustes
+-----------------
+  Ver sección 9.
+  · AjustesController: borrar tipoCuenta() y cambiarTipo().
+  · Delete ajustes/tipo-cuenta.blade.php.
+  · AjustesController::perfil: borrar la dependencia de ServicioMetas.
+  · AjustesController::eliminarCuenta: borrar el bloque de ServicioMetas.
+
+
+PASO 6 - Servicios
+-------------------
+  Ver secciones 10, 11, 12.
+  · ServicioCuentas: borrar cambiarTipo() y toda referencia a familiar
+    en cambiarRol().
+  · ServicioMetas: borrar todas las validaciones de "eres familiar".
+  · ServicioNotificaciones: borrar TIPO_INVITACION_META_REQUIERE_FAMILIAR.
+
+
+PASO 7 - Vistas
+----------------
+  Ver sección 13.
+  · publico/crear-usuario.blade.php: quitar las 2 tarjetas de tipo de cuenta.
+  · app/ajustes/_tabs.blade.php: quitar tab "Tipo de cuenta".
+  · app/metas/index.blade.php: quitar banner "cambia a familiar".
+  · publico/landing.blade.php: quitar CTA "Crear cuenta en pareja".
+  · ELIMINAR ajustes/tipo-cuenta.blade.php.
+
+
+PASO 8 - Factories y Seeders
+-----------------------------
+  Ver sección 14.
+  · UserFactory: borrar familiar(), o dejar como alias de estandar().
+  · UsuariosSeeder: reemplazar familiar@test.com por otro estandar.
+
+
+PASO 9 - Tests
+---------------
+  Ver sección 15.
+  · Reescribir los ~15-20 tests que usan familiar.
+  · Borrar los tests que validan la separación de roles.
+  · Actualizar el test de login: ya no hay redirección por familiar.
+
+
+PASO 10 - Documentación
+------------------------
+  Ver sección 16.
+  · Arquitectura_Cuentas_Claras.txt: §4, §7, §9, §11, §14.
+  · DECISIONES.md: nueva decisión #68.
+  · docs/backend/00-rutas.php: restar 2 rutas (las de tipo-cuenta).
+  · 00-rutas.php pasa de 68 a 66 rutas reales.
+
+
+PASO 11 - Verificación
+-----------------------
+  Ver sección 18.
+  php artisan test                    # ~195 passing
+  php artisan route:list --except-vendor  # 67 líneas (66 + fallback)
+  Smoke test manual completo.
+
+
+PASO 12 - Commit y PR
+----------------------
+  git add .
+  git commit -m "refactor: eliminar rol familiar, estandar absorbe todas
+  las capacidades"
+  git push -u origin feature/eliminar-rol-familiar
+  Crear Pull Request → main
+  Pedir review a Nikol y Valeria (afecta N5 y V4)
+
+
+======================================================================
+5. MIGRACIÓN DE BASE DE DATOS
+======================================================================
+
+Archivo: database/migrations/2026_10_22_000003_eliminar_rol_familiar.php
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Elimina el rol "familiar": todos los usuarios que lo tenían pasan a
+ * "estandar". No se borra ningún dato de metas ni participaciones; las
+ * metas compartidas activas siguen funcionando.
+ *
+ * La columna users.rol NO se altera a nivel de esquema (SQLite no permite
+ * cambiar el CHECK fácilmente). La validación del valor permitido se hace
+ * a nivel de aplicación (RegistroController, ServicioCuentas).
+ *
+ * Reversible: down() vuelve a poner 'familiar' a quien se llamaba
+ * "estandar" y tenga metas compartidas activas. Es una aproximación
+ * (no todos los estandar eran familiar antes), pero permite revertir
+ * sin perder funcionalidad.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        // 1. Registrar en auditoría a los usuarios afectados.
+        $afectados = DB::table('users')->where('rol', 'familiar')->count();
+
+        DB::table('users')->where('rol', 'familiar')->update(['rol' => 'estandar']);
+
+        if ($afectados > 0) {
+            \Illuminate\Support\Facades\Log::info(
+                "Migración eliminar_rol_familiar: {$afectados} usuarios pasaron de familiar a estandar."
+            );
+        }
+    }
+
+    public function down(): void
+    {
+        // Aproximación: usuarios estandar con metas compartidas activas
+        // vuelven a ser familiar. Es la mejor reconstrucción posible sin
+        // un backup previo.
+        $ids = DB::table('participaciones_meta')
+            ->where('estado_invitacion', 'aceptada')
+            ->pluck('user_id')
+            ->merge(
+                DB::table('metas')
+                    ->where('compartida', true)
+                    ->where('estado', 'activa')
+                    ->pluck('creador_id')
+            )
+            ->unique()
+            ->values();
+
+        if ($ids->isNotEmpty()) {
+            DB::table('users')
+                ->whereIn('id', $ids)
+                ->where('rol', 'estandar')
+                ->update(['rol' => 'familiar']);
+        }
+    }
+};
+
+
+Ejecutar:
+  php artisan migrate
+
+Verificar:
+  sqlite3 database/database.sqlite "SELECT rol, COUNT(*) FROM users GROUP BY rol;"
+  O con tinker:
+  php artisan tinker --execute="echo App\Models\User::selectRaw('rol, count(*) as n')->groupBy('rol')->get();"
+
+Debe devolver solo 'estandar' y 'administrador'.
+
+
+======================================================================
+6. CAMBIOS EN MODELO User
+======================================================================
+
+Archivo: app/Models/User.php
+
+6.1 NO SE TOCA
+--------------
+  · protected $fillable (sigue igual).
+  · casts() (rol sigue como string).
+  · Relaciones (gastos, categorias, gastosFijos, simulaciones, informes,
+    notificaciones, metas, participaciones).
+
+6.2 SE BORRA
+------------
+  Ningún método del User depende directamente de 'familiar'. Los métodos
+  rutaPanel(), esIpNueva(), registrarLogin() no cambian.
+
+6.3 SE DOCUMENTA (comentario)
+-----------------------------
+  Si el archivo tiene un comentario de cabecera que menciona roles:
+  Cambiar:
+    "Roles: estandar | familiar | administrador"
+  Por:
+    "Roles: estandar | administrador. El rol familiar fue eliminado en
+     2026-10-22 (ver DECISIONES.md #68)."
+
+6.4 LA COLUMNA users.rol NO SE ALTERA
+---------------------------------------
+  En SQLite, el esquema no tiene CHECK constraint sobre rol. En MySQL de
+  producción (cuando se migre), si se puso ENUM('estandar','familiar',
+  'administrador'), se puede:
+    a) Dejar el ENUM con los 3 valores y validar en app (recomendado).
+    b) ALTER TABLE users MODIFY rol ENUM('estandar','administrador');
+       (requiere migración de esquema nueva).
+  Recomendación: opción (a). La app nunca asigna 'familiar'.
+
+
+======================================================================
+7. CAMBIOS EN RUTAS
+======================================================================
+
+Archivo: routes/web.php
+------------------------
+Buscar todos los 'rol:estandar,familiar' y cambiar por 'rol:estandar'.
+
+Hay 4 grupos:
+  1. GRUPO C (panel, gastos, categorías, gastos-fijos, notificaciones,
+     créditos, informes, metas):
+     Route::middleware('rol:estandar,familiar')->group(function () {
+     → Route::middleware('rol:estandar')->group(function () {
+
+  2. Ajustes financieros (ajustes/eliminar-cuenta):
+     Deja de existir. Se elimina el bloque completo.
+
+  3. Comentarios de cabecera de web.php:
+     Actualizar la sección que dice "GRUPO C - estándar y familiar".
+     Cambiar por "GRUPO C - estándar".
+
+  4. redirectUsersTo (bootstrap/app.php):
+     Ya está condicionado a rol === 'administrador' → admin.panel, else panel.
+     Sin cambios.
+
+Archivo: routes/modulos/ajustes.php
+------------------------------------
+BORRAR el bloque de tipo-cuenta:
+
+  Route::prefix('ajustes')->name('ajustes.')->group(function () {
+      // ... perfil, confirmar-correo, reenviar ...
+
+      // BORRAR TODO ESTO:
+      Route::middleware('rol:estandar,familiar')->group(function () {
+          Route::get('/tipo-cuenta', ...)->name('tipo-cuenta');
+          Route::put('/tipo-cuenta', ...)->name('tipo-cuenta.update');
+          Route::get('/eliminar-cuenta', ...)->name('eliminar-cuenta');
+          Route::delete('/eliminar-cuenta', ...)->name('eliminar-cuenta.destroy');
+      });
+
+      // REEMPLAZAR por (sin middleware):
+      Route::get('/eliminar-cuenta', [AjustesController::class, 'eliminarCuenta'])
+          ->name('eliminar-cuenta');
+      Route::delete('/eliminar-cuenta', [AjustesController::class, 'destruirCuenta'])
+          ->name('eliminar-cuenta.destroy');
+  });
+
+Razón: 'eliminar-cuenta' se mantiene pero ahora solo aplica a 'estandar'
+(el admin sigue sin poder eliminar su cuenta desde Ajustes, pero eso se
+valida en el controlador con abort_unless, no con middleware).
+
+Archivo: routes/modulos/admin.php
+----------------------------------
+Sin cambios funcionales. Las rutas de admin solo aceptan
+'rol:administrador'. No tocan 'familiar'.
+
+Archivo: bootstrap/app.php
+---------------------------
+Sin cambios.
+
+
+======================================================================
+8. CAMBIOS EN RegistroController Y Requests
+======================================================================
+
+Archivo: app/Http/Controllers/Auth/RegistroController.php
+-----------------------------------------------------------
+BORRAR la lectura de 'tipo_cuenta' y el match que asigna rol.
+
+Buscar:
+  public function store(StoreRegistroRequest $request): RedirectResponse
+  {
+      $datos = $request->validated();
+      // ...
+      $rol = $datos['tipo_cuenta'] === 'familiar' ? 'familiar' : 'estandar';
+      // ...
+      User::create([...'rol' => $rol, ...]);
+  }
+
+Cambiar a:
+  public function store(StoreRegistroRequest $request): RedirectResponse
+  {
+      $datos = $request->validated();
+      // ... resto de la lógica ...
+
+      $usuario = User::create([
+          'nombre'                  => $datos['nombre'],
+          'cedula'                  => $datos['identificacion'],
+          'email'                   => strtolower($datos['correo']),
+          'password'                => Hash::make($datos['password']),
+          'rol'                     => 'estandar',  // siempre
+          'consentimiento_datos_at' => now(),
+      ]);
+
+      Auth::login($usuario);
+      $request->session()->regenerate();
+
+      return redirect()->route('panel')
+          ->with('exito', 'Registro exitoso');
+  }
+
+Archivo: app/Http/Requests/Auth/StoreRegistroRequest.php
+---------------------------------------------------------
+BORRAR 'tipo_cuenta' de rules() y de messages().
+
+Buscar:
+  public function rules(): array
+  {
+      return [
+          'nombre' => [...],
+          'identificacion' => [...],
+          'correo' => [...],
+          'password' => [...],
+          'tipo_cuenta' => ['required', 'in:estandar,familiar'],
+          'consentimiento' => [...],
+      ];
+  }
+
+Cambiar a:
+  public function rules(): array
+  {
+      return [
+          'nombre' => [...],
+          'identificacion' => [...],
+          'correo' => [...],
+          'password' => [...],
+          // tipo_cuenta BORRADO
+          'consentimiento' => [...],
+      ];
+  }
+
+Y en messages(), borrar cualquier 'tipo_cuenta.*'.
+
+Archivo: tests/Feature/AuthTest.php
+------------------------------------
+  · test_registro_familiar_guarda_rol_familiar → BORRAR
+  · test_no_se_puede_registrar_como_administrador → BORRAR
+    (ya no aplica porque 'tipo_cuenta' no existe)
+  · test_registro_valido_crea_usuario_estandar_con_sesion → sigue
+  · test_campos_extra_rol_y_activo_se_ignoran → sigue (el ataque se sigue
+    probando con 'rol' y 'activo', que no cambian)
+
+
+======================================================================
+9. CAMBIOS EN AjustesController Y Requests
+======================================================================
+
+Archivo: app/Http/Controllers/AjustesController.php
+----------------------------------------------------
+9.1 BORRAR el método tipoCuenta() completo.
+
+9.2 BORRAR el método cambiarTipo() completo.
+
+9.3 EN perfil():
+    Buscar:
+      public function perfil(Request $request): View
+      {
+          return view('app.ajustes.perfil', [
+              'usuario' => $request->user(),
+          ]);
+      }
+
+    Cambiar a (sin ServicioMetas):
+      public function perfil(Request $request): View
+      {
+          return view('app.ajustes.perfil', [
+              'usuario' => $request->user(),
+          ]);
+      }
+
+    No hay cambios visibles. Solo confirmar que no se inyecta
+    `tieneMetasCompartidasActivas` a la vista.
+
+9.4 EN eliminarCuenta():
+    Buscar:
+      public function eliminarCuenta(Request $request): View
+      {
+          abort_unless(
+              in_array($request->user()->rol, ['estandar', 'familiar'], true),
+              403
+          );
+          return view('app.ajustes.eliminar-cuenta', [...]);
+      }
+
+    Cambiar a:
+      public function eliminarCuenta(Request $request): View
+      {
+          abort_unless($request->user()->rol === 'estandar', 403);
+          return view('app.ajustes.eliminar-cuenta', [
+              'usuario' => $request->user(),
+          ]);
+      }
+
+9.5 EN destruirCuenta():
+    Buscar:
+      public function destruirCuenta(Request $request): RedirectResponse
+      {
+          abort_unless(
+              in_array($request->user()->rol, ['estandar', 'familiar'], true),
+              403
+          );
+          // ...
+      }
+
+    Cambiar a:
+      public function destruirCuenta(Request $request): RedirectResponse
+      {
+          abort_unless($request->user()->rol === 'estandar', 403);
+          // ... resto igual ...
+      }
+
+9.6 EN __construct():
+    Buscar:
+      public function __construct(
+          private ServicioCuentas $cuentas,
+          private ServicioMetas $metas,
+      ) {}
+
+    Cambiar a:
+      public function __construct(private ServicioCuentas $cuentas) {}
+
+    Y borrar el use App\Services\ServicioMetas; del inicio del archivo.
+
+9.7 BORRAR ajustes/tipo-cuenta.blade.php del filesystem.
+
+9.8 EN _tabs.blade.php, borrar el <a> que apunta a route('ajustes.tipo-cuenta').
+
+Archivo: app/Http/Requests/Auth/UpdatePerfilRequest.php
+--------------------------------------------------------
+Sin cambios. El update de perfil no toca 'rol' ni 'tipo_cuenta'.
+
+
+======================================================================
+10. CAMBIOS EN ServicioCuentas
+======================================================================
+
+Archivo: app/Services/ServicioCuentas.php
+
+10.1 BORRAR el método cambiarTipo() completo. Ya no se puede cambiar
+     de tipo porque solo hay uno (estandar). El admin no puede ser
+     estandar y viceversa (se gestiona vía /admin/usuarios, no vía
+     Ajustes).
+
+10.2 EN cambiarRol():
+     Buscar:
+       public function cambiarRol(User $usuario, string $nuevoRol): void
+       {
+           if (!in_array($nuevoRol, ['estandar', 'familiar', 'administrador'], true)) {
+               throw ValidationException::withMessages([
+                   'rol' => 'Selecciona un rol válido.',
+               ]);
+           }
+
+           if ($usuario->rol === $nuevoRol) return;
+
+           if ($usuario->rol === 'administrador' && $nuevoRol !== 'administrador') {
+               $this->verificarUltimoAdministrador($usuario);
+           }
+
+           if ($usuario->rol === 'familiar' && $nuevoRol === 'estandar'
+               && $this->metas->tieneMetasCompartidasActivas($usuario)) {
+               throw ValidationException::withMessages([
+                   'rol' => 'Debes finalizar o cancelar las metas compartidas activas antes de bajar a estándar.',
+               ]);
+           }
+
+           DB::transaction(function () use ($usuario, $nuevoRol) {
+               $usuario->rol = $nuevoRol;
+               $usuario->save();
+           });
+       }
+
+     Cambiar a:
+       public function cambiarRol(User $usuario, string $nuevoRol): void
+       {
+           if (!in_array($nuevoRol, ['estandar', 'administrador'], true)) {
+               throw ValidationException::withMessages([
+                   'rol' => 'Selecciona un rol válido.',
+               ]);
+           }
+
+           if ($usuario->rol === $nuevoRol) return;
+
+           if ($usuario->rol === 'administrador' && $nuevoRol !== 'administrador') {
+               $this->verificarUltimoAdministrador($usuario);
+           }
+
+           DB::transaction(function () use ($usuario, $nuevoRol) {
+               $usuario->rol = $nuevoRol;
+               $usuario->save();
+           });
+       }
+
+     Nota: si un admin baja a estandar y tenía metas compartidas activas
+     (porque antes era familiar), las conserva. Eso es aceptable.
+
+10.3 EN __construct():
+     Buscar:
+       public function __construct(private ServicioMetas $metas) {}
+
+     Cambiar a:
+       public function __construct() {}
+
+     Y borrar use App\Services\ServicioMetas; (si no se usa en otro lugar).
+
+     Si `$this->metas` se usa en otro método además de cambiarRol y
+     cambiarTipo (que se borran), borrar también esas referencias.
+
+
+======================================================================
+11. CAMBIOS EN ServicioMetas
+======================================================================
+
+Archivo: app/Services/ServicioMetas.php
+
+11.1 BORRAR las validaciones de "eres familiar para...".
+
+Buscar:
+  public function crear(User $creador, array $datos): Meta
+  {
+      // ...
+      if ($datos['compartida'] && $creador->rol !== 'familiar') {
+          throw ValidationException::withMessages([
+              'compartida' => 'Solo las cuentas familiares pueden crear metas compartidas...',
+          ]);
+      }
+      // ...
+  }
+
+Cambiar a:
+  public function crear(User $creador, array $datos): Meta
+  {
+      // ...
+      // Sin restricción de rol. Cualquier estandar puede crear compartidas.
+      // ...
+  }
+
+11.2 EN aceptar():
+     Buscar:
+       public function aceptar(User $usuario, ParticipacionMeta $participacion): void
+       {
+           // ...
+           if ($usuario->rol !== 'familiar') {
+               throw ValidationException::withMessages([
+                   'cuenta' => 'Para aceptar esta invitación debes cambiar tu tipo de cuenta a familiar en Ajustes.',
+               ]);
+           }
+           // ...
+       }
+
+     Cambiar a:
+       public function aceptar(User $usuario, ParticipacionMeta $participacion): void
+       {
+           // ...
+           // Sin restricción de rol.
+           // ...
+       }
+
+11.3 EN invitar():
+     Buscar la validación:
+       if ($invitado->rol !== 'familiar') {
+           // notificación especial "requiere familiar"
+       }
+
+     Cambiar a: BORRAR ese bloque completo. Cualquier usuario activo
+     (excepto admin y suspendido) puede ser invitado.
+
+11.4 EN tieneMetasActivas() y tieneMetasCompartidasActivas():
+     Se mantienen. Siguen siendo útiles para el dashboard y para
+     bloquear la eliminación de cuenta si hay metas activas (regla
+     existente).
+
+11.5 EN notificar():
+     Si ServicioMetas emite la notificación
+     TIPO_INVITACION_META_REQUIERE_FAMILIAR, borrar ese bloque.
+
+11.6 EN cancelarMetasCompartidasActivas() (usado por ServicioCuentas al
+     eliminar cuenta): se mantiene. Aplica a estandar también ahora.
+
+
+======================================================================
+12. CAMBIOS EN ServicioNotificaciones
+======================================================================
+
+Archivo: app/Services/ServicioNotificaciones.php
+
+12.1 BORRAR la constante TIPO_INVITACION_META_REQUIERE_FAMILIAR.
+
+12.2 EN el switch/match que arma el ícono/título por tipo, borrar
+     cualquier @case o if de ese tipo.
+
+12.3 EN resources/views/app/notificaciones/_icono.blade.php, borrar el
+     @case 'invitacion_meta_requiere_familiar'.
+
+12.4 En public/css/notificaciones.css, borrar cualquier regla asociada
+     a `.notificacion-tipo-invitacion_meta_requiere_familiar` si existe.
+
+
+======================================================================
+13. CAMBIOS EN VISTAS
+======================================================================
+
+13.1 publico/crear-usuario.blade.php
+--------------------------------------
+Reescribir el bloque de selección de tipo de cuenta.
+
+Buscar (aprox):
+  <div class="registro-tipo-cuenta">
+    <h3>Tipo de cuenta</h3>
+    <label>
+      <input type="radio" name="tipo_cuenta" value="estandar" checked>
+      <div>Cuenta personal</div>
+      <p>Para organizar tus finanzas solo/a.</p>
+    </label>
+    <label>
+      <input type="radio" name="tipo_cuenta" value="familiar">
+      <div>Cuenta en pareja</div>
+      <p>Para compartir metas con otra persona.</p>
+    </label>
+  </div>
+
+Cambiar a: (borrar el bloque completo, sin reemplazo — el registro ya
+no pregunta por tipo de cuenta).
+
+Y borrar cualquier JavaScript que muestre/oculte cosas según el radio.
+
+13.2 app/ajustes/_tabs.blade.php
+---------------------------------
+Borrar la línea:
+  <a href="{{ route('ajustes.tipo-cuenta') }}" ...>Tipo de cuenta</a>
+
+Si el array de tabs está centralizado, borrar el elemento correspondiente.
+
+13.3 app/metas/index.blade.php
+-------------------------------
+Buscar cualquier mensaje tipo:
+  @if ($usuario->rol === 'estandar')
+    <div class="aviso">
+      Cambia a cuenta familiar para crear metas compartidas.
+      <a href="{{ route('ajustes.tipo-cuenta') }}">Cambiar</a>
+    </div>
+  @endif
+
+BORRAR el bloque completo.
+
+Buscar también:
+  @if ($usuario->rol === 'familiar' || $meta->compartida)
+    ...botón "Invitar"...
+  @endif
+
+Cambiar a:
+  @if ($meta->compartida)
+    ...botón "Invitar"...
+  @endif
+
+13.4 publico/landing.blade.php
+-------------------------------
+Buscar:
+  <a href="{{ route('registro', ['tipo' => 'familiar']) }}">
+    Crear cuenta en pareja
+  </a>
+
+Cambiar a:
+  Eliminar el <a> completo, o reemplazarlo por un único CTA
+  "Crear mi cuenta gratis" → route('registro') (sin parámetro tipo).
+
+Si hay hero images "moradas" (hero-main_morado.jpg etc.), se pueden
+dejar como assets huérfanos o borrarlas. Recomendación: dejar por si
+se reactiva el rol.
+
+Si hay mensajes "Ahorra con tu pareja" en la landing, reescribirlos a
+"Ahorra con otra persona" o "Ahorra en equipo" (sin mencionar "pareja").
+
+13.5 app/ajustes/tipo-cuenta.blade.php
+---------------------------------------
+ELIMINAR el archivo completo:
+  rm resources/views/app/ajustes/tipo-cuenta.blade.php
+
+
+======================================================================
+14. CAMBIOS EN FACTORIES Y SEEDERS
+======================================================================
+
+Archivo: database/factories/UserFactory.php
+--------------------------------------------
+Buscar:
+  public function familiar(): static
+  {
+      return $this->state(fn () => ['rol' => 'familiar']);
+  }
+
+Opción A (recomendada) — dejar como alias de estandar para no romper
+tests existentes que aún llamen ->familiar():
+
+  public function familiar(): static
+  {
+      // DEPRECATED: el rol familiar fue eliminado en 2026-10-22.
+      // Se mantiene por compatibilidad; devuelve estandar.
+      return $this->state(fn () => ['rol' => 'estandar']);
+  }
+
+Opción B — borrar el método. Si lo borras, reescribe los tests que lo
+usen (ver sección 15).
+
+Archivo: database/seeders/UsuariosSeeder.php
+---------------------------------------------
+Buscar:
+  User::factory()->familiar()->create([
+      'nombre' => 'Familiar Test',
+      'email' => 'familiar@test.com',
+      ...
+  ]);
+
+Cambiar a (renombrar la cuenta de prueba para que sea un segundo
+estandar, útil para probar metas compartidas entre dos estandar):
+
+  User::factory()->create([
+      'nombre' => 'Estándar Test 2',
+      'email' => 'estandar2@test.com',
+      'rol' => 'estandar',
+      ...
+  ]);
+
+O simplemente borrar el usuario familiar del seeder si no lo necesitas
+para las pruebas. Recomendación: mantener un segundo estandar porque
+sirve para probar metas compartidas.
+
+
+======================================================================
+15. CAMBIOS EN TESTS
+======================================================================
+
+15.1 tests/Feature/AuthTest.php
+--------------------------------
+  BORRAR:
+    test_registro_familiar_guarda_rol_familiar
+    test_no_se_puede_registrar_como_administrador
+    (ya no aplican: 'tipo_cuenta' no existe)
+
+  MODIFICAR:
+    test_registro_valido_crea_usuario_estandar_con_sesion
+    (quitar el campo 'tipo_cuenta' => 'estandar' del array de datos)
+
+  MODIFICAR:
+    test_campos_extra_rol_y_activo_se_ignoran
+    (sigue funcionando; el ataque es 'rol' => 'administrador' por POST,
+     la validación de StoreRegistroRequest lo ignora)
+
+15.2 tests/Feature/MetasTest.php
+---------------------------------
+  BORRAR:
+    test_un_estandar_puede_crear_meta_individual_pero_no_compartida
+    (ahora sí puede compartida)
+
+    test_estandar_no_puede_aceptar_hasta_cambiar_a_familiar
+    (ahora sí puede aceptar)
+
+    test_invitar_a_un_estandar_crea_invitacion_y_notificacion_especial
+    (ya no hay notificación especial)
+
+  MODIFICAR:
+    Cualquier $familiar = User::factory()->familiar()->create()
+    → User::factory()->create()  (estandar por defecto)
+
+  MODIFICAR:
+    test_administrador_recibe_403_en_metas_ pero_estandar_no
+    (sigue igual; solo cambia el factory)
+
+  AÑADIR:
+    test_estandar_puede_crear_meta_compartida (nuevo, valida el cambio)
+
+    public function test_estandar_puede_crear_meta_compartida(): void
+    {
+        $creador = User::factory()->create();   // estandar
+        $invitado = User::factory()->create();  // estandar
+
+        $meta = app(ServicioMetas::class)->crear($creador, [
+            'nombre' => 'Viaje juntos',
+            'monto_objetivo' => 5000000,
+            'compartida' => true,
+            'correo_invitado' => $invitado->email,
+            'fecha_limite' => now()->addMonths(6)->toDateString(),
+        ]);
+
+        $this->assertTrue($meta->compartida);
+        $this->assertSame('activa', $meta->estado);
+    }
+
+15.3 tests/Feature/AjustesTest.php
+-----------------------------------
+  BORRAR:
+    test_estandar_puede_cambiar_a_familiar
+    test_familiar_sin_metas_puede_bajar_a_estandar
+    test_familiar_con_meta_compartida_activa_no_puede_bajar
+    test_familiar_con_solo_meta_individual_puede_bajar
+    test_tipo_cuenta_lo_ven_estandar_y_familiar_pero_no_admin
+    test_admin_no_puede_cambiar_tipo_de_cuenta
+    (todos los de "tipo de cuenta")
+
+  MODIFICAR:
+    test_eliminar_cuenta_lo_ven_estandar_y_familiar_pero_no_admin
+    → test_eliminar_cuenta_lo_ve_estandar_pero_no_admin
+    (borrar la parte que prueba familiar)
+
+    test_admin_no_puede_eliminar_su_cuenta_desde_ajustes
+    (sigue funcionando, solo cambia el factory si usaba familiar)
+
+  MANTENER:
+    Todos los tests de perfil, cambio de correo, eliminar cuenta.
+
+15.4 tests/Feature/PermisosTest.php
+------------------------------------
+  MODIFICAR:
+    test_grupo_c_estandar_y_familiar_entran_el_administrador_recibe_403
+    → test_grupo_c_estandar_entra_el_administrador_recibe_403
+
+    test_grupo_b_financiero_solo_estandar_y_familiar
+    → borrar (el grupo B financiero desaparece; ajustes/eliminar-cuenta
+      pasa a estar disponible para estandar sin grupo aparte)
+
+  MODIFICAR:
+    Cualquier User::factory()->familiar() → User::factory()->create()
+
+15.5 tests/Feature/DashboardTest.php
+-------------------------------------
+  MODIFICAR:
+    test_familiar_ve_tarjeta_de_metas
+    → test_usuario_con_metas_ve_tarjeta_de_metas
+    (el criterio pasa de "rol familiar" a "tiene metas activas")
+
+    Si DashboardController usa `$usuario->rol === 'familiar'` para mostrar
+    la tarjeta, cambiar esa condición a `$usuario->metas()->exists()` o
+    similar.
+
+15.6 tests/Feature/BaseDeDatosTest.php
+---------------------------------------
+  MODIFICAR:
+    test_las_factories_crean_cada_rol
+    → borrar la aserción de familiar() o cambiar el assert a que
+      devuelve 'estandar'
+
+15.7 tests/Feature/Admin/PanelTest.php
+---------------------------------------
+  MODIFICAR:
+    test_familiar_recibe_403
+    → borrar o cambiar a test_estandar_con_metas_recibe_403 (usar
+      estandar en su lugar)
+
+15.8 tests/Feature/Admin/UsuariosTest.php
+------------------------------------------
+  MODIFICAR:
+    test_admin_puede_cambiar_el_rol_de_un_usuario
+    (asegurar que solo se prueban estandar <-> administrador)
+
+    test_no_se_puede_cambiar_el_rol_del_ultimo_admin
+    (sigue funcionando)
+
+15.9 tests/Feature/Admin/CategoriasSistemaTest.php
+---------------------------------------------------
+  Sin cambios (no toca familiar).
+
+15.10 tests/Feature/Admin/AuditoriaTest.php
+--------------------------------------------
+  Sin cambios (no toca familiar).
+
+
+======================================================================
+16. CAMBIOS EN DOCUMENTACIÓN
+======================================================================
+
+16.1 Arquitectura_Cuentas_Claras.txt
+--------------------------------------
+Actualizar:
+
+  §2 (Estado actual): añadir en HECHO:
+    HECHO (Eliminación del rol familiar, 2026-10-22):
+      [x] Migración: todos los familiar → estandar.
+      [x] Metas compartidas abiertas a cualquier estandar.
+      [x] Registro sin selector de tipo de cuenta.
+      [x] Ajustes sin "Tipo de cuenta".
+      [x] Tests reescritos (~15-20).
+      [x] Decisión #68.
+
+  §4 (Roles): cambiar la tabla a solo 2 roles:
+    estandar ........ gastos, categorías, gastos fijos, notificaciones,
+                      simulador, informes, panel, ajustes, METAS INDIVIDUALES
+                      Y COMPARTIDAS.
+    administrador ... SOLO administración.
+
+    Borrar "familiar" de la sección.
+
+  §7 (Rutas): quitar las 2 rutas ajustes.tipo-cuenta (GET y PUT).
+    El conteo pasa de 68 a 66 rutas reales.
+    (68 - 2 = 66).
+
+  §9 (Modelo de datos): cambiar
+    rol (estandar|familiar|administrador, default estandar)
+    por
+    rol (estandar|administrador, default estandar)
+
+  §11 (Reglas de negocio):
+    Borrar toda la sección "Cambio de tipo de cuenta".
+    Borrar toda la sección "Cambio de rol (por admin)" (o simplificarla
+    a solo el paso entre estandar y administrador).
+    Borrar "Familiar -> estándar bloqueado con metas compartidas activas".
+    Borrar "Invitar a un estándar: permitido + notificación especial".
+    Borrar "Aceptar: requiere ser familiar".
+    Reemplazar por: "Cualquier usuario estandar puede crear, invitar y
+    aceptar metas compartidas".
+
+  §14 (Decisiones): añadir la #68 (ver sección 16.2 abajo).
+
+  §15 (Instrucciones): añadir una nueva instrucción:
+    "81. El rol familiar fue eliminado en 2026-10-22. Si una regla de
+    negocio nueva requiere separar 'quien comparte' de 'quien no',
+    crear un rol nuevo, no reutilizar familiar."
+
+  §16 (Documentos relacionados): referenciar este runbook:
+    "Plan_Eliminar_Rol_Familiar_2026-10-22.txt (runbook completo)".
+
+16.2 DECISIONES.md
+-------------------
+Añadir al final, en la sección de decisiones del 2026-10-22:
+
+  #68 (2026-10-22) Eliminación del rol familiar:
+      · Todos los usuarios con rol 'familiar' se migran a 'estandar'.
+      · Cualquier estandar puede crear metas compartidas, invitar y
+        aceptar invitaciones (antes solo familiar).
+      · El registro ya no pregunta por tipo de cuenta: todos son estandar.
+      · Ajustes ya no tiene "Tipo de cuenta".
+      · Se elimina ServicioCuentas::cambiarTipo.
+      · Se elimina ServicioMetas::validarFamiliar() (o equivalentes).
+      · Se elimina ServicioNotificaciones::TIPO_INVITACION_META_REQUIERE_FAMILIAR.
+      · Se eliminan las rutas ajustes.tipo-cuenta (GET y PUT).
+      · Se mantiene users.rol con la columna como string. La app solo
+        asigna 'estandar' o 'administrador'.
+      · Se mantiene el CSS morado en theme.css (por si se reactiva).
+      · Test count baja de 209 a ~195.
+      · Contradice / reemplaza:
+        - #7 (fecha límite): no afectada directamente, sigue vigente.
+        - #18 (abandonar meta): no afectada, sigue vigente.
+        - #24 (tinte por tipo de cuenta): parcialmente. Sigue vigente
+          para estandar y administrador, pero el morado del familiar
+          queda inalcanzable.
+        - Decisión del 2026-10-08 "Metas al Grupo C": se simplifica
+          (todos son Grupo C porque todos son estandar).
+      · Motivo: el rol familiar solo agregaba 2 capacidades y forzaba
+        al usuario a cambiar de tipo desde Ajustes. La fricción UX no
+        aportaba valor de negocio. Decisión aprobada por el equipo el
+        2026-10-22.
+
+16.3 docs/backend/00-rutas.php
+-------------------------------
+  · BORRAR las 2 líneas de ajustes.tipo-cuenta (GET y PUT).
+  · Actualizar el conteo del Grupo B Financiero: 4 → 2 rutas.
+  · Actualizar el total: 68 → 66 rutas reales + fallback = 67 mostradas.
+  · Añadir al CHANGELOG RUTAS:
+    2026-10-22 (post J9): -2 = 66. Se eliminan ajustes.tipo-cuenta
+    (GET y PUT). Motivo: eliminación del rol familiar (decisión #68).
+
+16.4 README.md (si tiene una sección de "Roles"):
+     Actualizar la lista de roles a solo estandar y administrador.
+
+
+======================================================================
+17. ROLLBACK COMPLETO
+======================================================================
+
+Si algo sale mal después del merge, el rollback se hace en este orden:
+
+17.1 Revertir la migración
+---------------------------
+  php artisan migrate:rollback --step=1
+  (la migración down() vuelve a poner familiar a quienes estandar con
+   metas compartidas activas; es aproximado)
+
+  O manual:
+  UPDATE users SET rol='familiar' WHERE id IN (
+    SELECT creador_id FROM metas WHERE compartida=1 AND estado='activa'
+    UNION
+    SELECT user_id FROM participaciones_meta WHERE estado_invitacion='aceptada'
+  ) AND rol='estandar';
+
+17.2 Revertir el código
+------------------------
+  Opción A (recomendada si el merge a main no se hizo):
+    git checkout main
+    git branch -D feature/eliminar-rol-familiar
+
+  Opción B (si ya se mergeó a main):
+    git revert <commit-hash>
+    git push origin main
+
+17.3 Re-ejecutar seeders y limpiar cachés
+------------------------------------------
+  php artisan migrate:fresh --seed
+  php artisan route:clear
+  php artisan config:clear
+  php artisan view:clear
+  php artisan test
+
+
+======================================================================
+18. VERIFICACIÓN FINAL
+======================================================================
+
+Antes de hacer la PR, correr todo esto:
+
+  [ ] php artisan migrate          → sin errores
+  [ ] php artisan test              → ~195 passing (todos verdes)
+  [ ] php artisan route:list --except-vendor | wc -l
+      → 67 líneas (66 rutas + 1 fallback)
+  [ ] grep -rn "familiar" app/ resources/ tests/ database/
+      → NO debe devolver nada excepto:
+        - comentarios históricos en DECISIONES.md y Arquitectura
+        - el CSS morado en theme.css (data-account-type="familiar",
+          .tarjeta-tinte--familiar) — opcional borrar
+        - UserFactory::familiar() como alias deprecated
+  [ ] grep -rn "tipo-cuenta" routes/ resources/ app/
+      → NO debe devolver nada (rutas y vistas limpias)
+  [ ] grep -rn "tipo_cuenta" resources/ app/ tests/
+      → NO debe devolver nada (campo eliminado del registro)
+
+Smoke test manual:
+  [ ] Registro: crear cuenta → no pregunta tipo → entra como estandar
+  [ ] Login como estandar@test.com / password → /panel
+  [ ] Crear meta compartida → funciona sin aviso "cambia a familiar"
+  [ ] Invitar a otro estandar → funciona
+  [ ] Aceptar como el otro estandar → funciona
+  [ ] Ir a Ajustes → no aparece "Tipo de cuenta" en tabs
+  [ ] Ir a Ajustes → Eliminar cuenta → 403 si es admin, 200 si estandar
+  [ ] Login como admin@test.com / password → /admin/panel
+  [ ] Admin no puede acceder a /ajustes/tipo-cuenta → 404 (ruta eliminada)
+  [ ] Landing: no hay botón "Crear cuenta en pareja"
+  [ ] Registro: no hay selector de tipo de cuenta
+
+
+======================================================================
+19. ARCHIVOS A ELIMINAR
+======================================================================
+
+  1. resources/views/app/ajustes/tipo-cuenta.blade.php
+  2. (opcional) public/css/ajustes.css puede quedar con estilos huérfanos
+     de tipo-cuenta. Revisar y limpiar.
+
+  NO borrar:
+  · public/img/hero-main_morado.jpg, hero-main-2_morado.jpg
+    (por si se reactiva el rol; no ocupan mucho y la landing puede
+     usarlas como assets secundarios)
+  · theme.css sección 5.3 (cuenta familiar) y 5.4 (overrides tintados)
+    (dejar comentadas o con un TODO si quieres limpiarlas después)
+
+
+======================================================================
+20. ARCHIVOS QUE NO SE TOCAN
+======================================================================
+
+  · app/Http/Middleware/CuentaActiva.php
+  · app/Http/Middleware/RolRequerido.php
+  · app/Http/Middleware/ExpirarSesionPorInactividad.php
+  · app/Http/Middleware/SecurityHeaders.php
+  · app/Http/Controllers/Admin/* (todos, salvo los que ya se ajustaron
+    en J9)
+  · app/Http/Controllers/Admin/UsuarioController.php
+    (cambiarRol() valida con ['estandar', 'administrador']; el service
+    hace el resto)
+  · app/Services/Auditoria.php
+  · app/Services/ServicioNotificaciones.php (salvo el TIPO borrado)
+  · app/Services/ServicioGastosFijos.php
+  · app/Notifications/AlertaSeguridad.php
+  · routes/modulos/admin.php (solo revisar que el admin no rompa)
+  · bootstrap/app.php
+  · config/legal.php
+  · Migraciones de J9 (auditorias, last_login_ip)
+  · public/css/theme.css (sección 5.3 y 5.4 quedan inalcanzables pero
+    no rompen nada; se pueden limpiar en J9.2 si se quiere)
+  · public/js/* (ninguno toca el rol)
+
+
+======================================================================
+FIN DEL DOCUMENTO
+======================================================================
+
+Notas finales:
+  · Este plan asume que J9 está mergeado a main y todos los tests verdes.
+  · Si J9 todavía no está mergeado, este plan se puede hacer en paralelo
+    en su propia rama, pero vas a tener conflictos en routes/modulos/
+    ajustes.php y en algunos tests.
+  · Después de mergear, actualizar el conteo de rutas en el documento
+    de arquitectura y en 00-rutas.php.
+  · Si el equipo decide reactivar "familiar" en el futuro, NO reutilizar
+    el nombre. Crear un rol nuevo con otro nombre (ej. "compartido") y
+    documentar la nueva decisión con número.
+
+Fin.

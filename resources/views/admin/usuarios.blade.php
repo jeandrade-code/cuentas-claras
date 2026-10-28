@@ -18,7 +18,7 @@
       </header>
 
       {{-- Aviso --}}
-      <section class="card p-space-md admin-aviso">
+      <section class="card p-space-md admin-aviso" data-tour="admin-usuarios-aviso">
         <div class="flex items-start gap-space-sm">
           <span class="material-symbols-outlined text-[20px] admin-aviso__icono">info</span>
           <p class="text-on-surface-variant font-body-sm text-body-sm leading-relaxed">
@@ -30,7 +30,7 @@
       </section>
 
       {{-- Filtros --}}
-      <section class="card p-space-lg">
+      <section class="card p-space-lg" data-tour="admin-usuarios-filtros">
         <h2 class="font-headline-sm text-headline-sm text-on-surface mb-space-md">Buscar y filtrar</h2>
 
         <form method="GET" action="{{ route('admin.usuarios') }}" class="admin-form-filtros">
@@ -74,7 +74,7 @@
       </section>
 
       {{-- Listado --}}
-      <section class="card p-space-lg" data-dinamico="usuarios">
+      <section class="card p-space-lg" data-dinamico="usuarios" data-tour="admin-usuarios-lista">
         <header class="admin-lista__cabecera">
           <h2 class="font-headline-md text-headline-md text-on-surface">
             Usuarios registrados
@@ -213,4 +213,6 @@
 
     </div>
   </main>
+{{-- ONBOARDING --}}
+<x-onboarding-tour name="admin-usuarios" :auto-start="true" />
 @endsection

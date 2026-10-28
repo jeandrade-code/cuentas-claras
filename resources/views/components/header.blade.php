@@ -21,7 +21,7 @@ class="fixed top-0 left-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1
         class="flex items-center gap-space-sm"
         data-path="landing-page"
         href="{{ route('inicio') }}"
-      ><x-logo :alto="32" /></a>
+      ><x-logo :alto="42" /></a>
     </div>
     <nav
       class="hidden lg:flex items-center gap-space-xs"
@@ -73,7 +73,7 @@ class="fixed top-0 left-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1
           href="{{ route('login') }}"
         >Iniciar Sesión</a>
         <a
-          class="hidden sm:inline-flex items-center px-space-md py-space-xs rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md whitespace-nowrap transition-all shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
+          class="hidden sm:inline-flex items-center px-space-md py-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md whitespace-nowrap transition-all shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
           data-path="crear-cuenta"
           href="{{ route('registro') }}"
         >Crear Cuenta Gratis</a>
