@@ -35,7 +35,7 @@
             @endif
 
             {{-- RESUMEN --}}
-            <section class="gf-section">
+            <section class="gf-section" data-tour="gf-resumen">
                 <div class="gf-section-heading">
                     <div>
                         <h2>Resumen del mes</h2>
@@ -59,7 +59,7 @@
             </section>
 
             {{-- FORMULARIO PARA CREAR --}}
-            <section class="gf-section" id="crear-gasto">
+            <section class="gf-section" id="crear-gasto" data-tour="gf-form">
                 <div class="gf-section-heading">
                     <div>
                         <h2>Agregar gasto fijo</h2>
@@ -129,7 +129,7 @@
             </section>
 
             {{-- LISTA DE GASTOS --}}
-            <section class="gf-section">
+            <section class="gf-section" data-tour="gf-lista">
                 <div class="gf-section-heading">
                     <div>
                         <h2>Mis gastos fijos</h2>
@@ -342,4 +342,5 @@
 
         </div>
     </main>
+    <x-onboarding-tour name="gastos-fijos" :auto-start="true" />
 @endsection

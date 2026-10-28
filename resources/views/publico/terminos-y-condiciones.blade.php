@@ -12,6 +12,9 @@ DATOS   : config('legal.*'). Si config/legal.php no existe, usa fallbacks.
 
 @section('titulo', 'Términos y condiciones · ' . (config('legal.app_name') ?: 'Cuentas Claras'))
 
+<!-- Seo -->
+@section('meta_description', 'Lee los términos y condiciones de uso de Cuentas Claras. Una herramienta de organización financiera, no una entidad bancaria.')
+
 @push('styles')
   <link rel="stylesheet" href="{{ asset('css/legal.css') }}">
 @endpush

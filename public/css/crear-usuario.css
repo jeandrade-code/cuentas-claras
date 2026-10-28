@@ -2,5 +2,113 @@
  * ==============================================================================
  * ARCHIVO : public/css/crear-usuario.css
  * QUÉ ES  : Estilos EXCLUSIVOS de la pantalla de registro (crear-usuario).
+ * CAMBIOS 2026-10-22:
+ *   - Añadido sistema de tarjetas de tipo de cuenta con estado seleccionado.
+ *   - Hover states consistentes con el resto del design system.
+ *   - Soporte de modo oscuro vía tokens.
+ *   - Feedback visual de foco con anillo de color de marca.
  * ==============================================================================
  */
+
+/* -------------------------------------------------------------------------
+   1. Tarjetas de tipo de cuenta
+   ------------------------------------------------------------------------- */
+.account-type-card {
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.account-type-card:hover {
+  border-color: color-mix(in srgb, var(--accent, var(--primary)) 55%, transparent);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--accent, var(--primary)) 20%, transparent);
+}
+
+.account-type-card:active {
+  transform: scale(0.995);
+}
+
+.account-type-card:focus-visible {
+  outline: 2px solid var(--accent, var(--primary));
+  outline-offset: 2px;
+}
+
+/* Estado seleccionado */
+.account-type-card.is-selected {
+  border-color: var(--accent, var(--primary));
+  border-width: 2px;
+  background: color-mix(in srgb, var(--accent, var(--primary)) 6%, var(--surface-container-lowest));
+}
+
+.account-type-card.is-selected:hover {
+  border-color: var(--accent, var(--primary));
+}
+
+/* Estado no seleccionado (leve atenuación) */
+.account-type-card:not(.is-selected) {
+  opacity: 0.85;
+}
+
+.account-type-card:not(.is-selected):hover {
+  opacity: 1;
+}
+
+/* Modo oscuro */
+[data-theme="oscuro"] .account-type-card {
+  background: var(--surface-container-low);
+}
+
+[data-theme="oscuro"] .account-type-card.is-selected {
+  background: color-mix(in srgb, var(--accent, var(--primary)) 10%, var(--surface-container-low));
+}
+
+/* -------------------------------------------------------------------------
+   2. Inputs: anillo de foco consistente
+   ------------------------------------------------------------------------- */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--primary)) 18%, transparent);
+}
+
+/* -------------------------------------------------------------------------
+   3. Checkbox de consentimiento
+   ------------------------------------------------------------------------- */
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent, var(--primary));
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------
+   4. Barra de fuerza de contraseña
+   ------------------------------------------------------------------------- */
+#strength-label {
+  transition: color 0.25s ease;
+}
+
+/* -------------------------------------------------------------------------
+   5. Responsive
+   ------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  /* En tablet y móvil, el sidebar va debajo del formulario */
+  aside {
+    order: 2;
+  }
+  section {
+    order: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-type-card,
+  #strength-label {
+    transition: none;
+  }
+  .account-type-card:active {
+    transform: none;
+  }
+}

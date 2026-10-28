@@ -11,6 +11,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use App\Http\Requests\Admin\EliminarCategoriaSistemaRequest;
+use App\Models\Gasto;
+use App\Models\GastoFijo;
+use Illuminate\Database\QueryException;
 /**
  * 2026-10-22 (J9): auditoría en store, update y desactivar.
  *                  desactivar togglea: registra categoria.desactivar o
@@ -128,4 +131,65 @@ class CategoriaSistemaController extends Controller
 
         return back()->with('exito', $mensaje);
     }
+
+    /**
+     * Elimina una categoría del sistema SOLO si no tiene gastos ni gastos fijos.
+     * Requiere re-auth (current_password) vía EliminarCategoriaSistemaRequest.
+     * Si tiene referencias, se bloquea con un mensaje claro.
+     */
+    public function destroy(EliminarCategoriaSistemaRequest $request, Categoria $categoria): RedirectResponse
+    {
+        // authorize() del Request ya valida:
+        //   - que la categoría sea del sistema (user_id === null)
+        //   - que current_password sea correcta
+        // Por eso NO repetimos abort_unless aquí (rompería el 403 por orden de validación).
+
+        // Contar referencias sin exponer montos ni usuarios (solo COUNT).
+        $gastos = Gasto::where('categoria_id', $categoria->id)->count();
+        $gastosFijos = GastoFijo::where('categoria_id', $categoria->id)->count();
+
+        if ($gastos > 0 || $gastosFijos > 0) {
+            $partes = [];
+            if ($gastos > 0)
+                $partes[] = $gastos . ' ' . ($gastos === 1 ? 'gasto' : 'gastos');
+            if ($gastosFijos > 0)
+                $partes[] = $gastosFijos . ' ' . ($gastosFijos === 1 ? 'gasto fijo' : 'gastos fijos');
+
+            return back()->withErrors([
+                'categoria' => 'Esta categoría está en uso (' . implode(' y ', $partes) . '). No se puede eliminar; desactívala en su lugar.',
+            ]);
+        }
+
+        // Capturar datos ANTES del delete (para auditoría + por si hay race condition).
+        $idBorrado = $categoria->id;
+        $nombreBorrado = $categoria->nombre;
+        $bloqueBorrado = $categoria->bloque;
+
+        try {
+            $categoria->delete();
+        } catch (QueryException $e) {
+            // Defensa por si alguien crea un gasto entre el count() y el delete().
+            return back()->withErrors([
+                'categoria' => 'No se pudo eliminar la categoría. Intenta de nuevo.',
+            ]);
+        }
+
+        // Auditoría: dejar rastro de la acción destructiva.
+        $this->auditoria->registrar(
+            accion: 'categoria.eliminar',
+            modelo: 'Categoria',
+            modeloId: $idBorrado,
+            antes: [
+                'nombre' => $nombreBorrado,
+                'bloque' => $bloqueBorrado,
+            ],
+            despues: null,
+        );
+
+        return redirect()
+            ->route('admin.categorias')
+            ->with('exito', 'Categoría eliminada');
+    }
+
+
 }

@@ -365,6 +365,9 @@ html.lp-js .lp-line.is-visible {
 .lp-faq summary {
   list-style: none;
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .lp-faq summary::-webkit-details-marker {
   display: none;
@@ -456,11 +459,12 @@ html.lp-js .lp-line.is-visible {
 }
 .lp-cta-bg > img {
   display: block;
-  width: 66%;
+  width: 63%;
   height: 100%;
-  object-fit: cover;
-  object-position: 70% center;   /* antes: 58% center */
+  object-fit: contain;
+     /* antes: 58% center */
   float: inline-end;
+  margin: -122px;
 }
 @media (min-width: 1024px) {
   .lp-cta-bg {
@@ -474,10 +478,10 @@ html.lp-js .lp-line.is-visible {
     );
     mask-image: linear-gradient(
       to right,
-      transparent 35%,
-      rgba(0, 0, 0, 0.15) 50%,
-      rgba(0, 0, 0, 0.55) 61%,
-      #000 75%
+      transparent 45%,
+      rgba(0, 0, 0, 0.15) 51%,
+      rgba(0, 0, 0, 0.55) 60%,
+      #000 79%
     );
   }
 }

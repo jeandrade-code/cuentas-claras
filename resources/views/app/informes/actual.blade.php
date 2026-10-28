@@ -37,7 +37,7 @@
             </p>
         @endif
 
-        <section class="card p-space-lg">
+        <section class="card p-space-lg" data-tour="inf-selector">
             <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
                 Selecciona el mes
             </h2>
@@ -88,7 +88,7 @@
             </section>
         @endif
 
-        <section class="card p-space-lg">
+        <section class="card p-space-lg" data-tour="inf-resumen">
             <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
                 Resumen del mes
             </h2>
@@ -117,7 +117,7 @@
             </div>
         </section>
 
-        <section class="card p-space-lg" data-dinamico="informe">
+        <section class="card p-space-lg" data-dinamico="informe" data-tour="inf-distribucion">
             <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
                 Distribución real vs recomendada
             </h2>
@@ -278,4 +278,6 @@
 
     </div>
 </main>
+{{-- ONBOARDING TOUR --}}
+<x-onboarding-tour name="informes" :auto-start="true" />
 @endsection

@@ -12,6 +12,9 @@ DATOS   : config('legal.*'). Si config/legal.php no existe, usa fallbacks.
 
 @section('titulo', 'Política de privacidad · ' . (config('legal.app_name') ?: 'Cuentas Claras'))
 
+<!-- Seo -->
+@section('meta_description', 'Conoce cómo Cuentas Claras protege tus datos personales y financieros, cumpliendo con la Ley 1581 de 2012 en Colombia.')
+
 @push('styles')
   <link rel="stylesheet" href="{{ asset('css/legal.css') }}">
 @endpush

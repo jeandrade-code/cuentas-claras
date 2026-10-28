@@ -66,8 +66,8 @@ class UpdatePerfilRequest extends FormRequest
                 'nullable',
                 Rule::requiredIf(function () use ($usuario) {
                     $cambiaPassword = !empty($this->input('nueva_contrasena'));
-                    $cambiaEmail    = strtolower(trim((string) $this->input('email')))
-                                      !== $usuario->email;
+                    $cambiaEmail = strtolower(trim((string) $this->input('email')))
+                        !== $usuario->email;
                     return $cambiaPassword || $cambiaEmail;
                 }),
                 'current_password',
@@ -79,6 +79,18 @@ class UpdatePerfilRequest extends FormRequest
                 'min:8',
                 'confirmed',
             ],
+
+            'foto_perfil' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048', // 2 MB
+            ],
+
+            'eliminar_foto' => [
+                'nullable',
+                'boolean',
+            ],
         ];
     }
 
@@ -88,18 +100,22 @@ class UpdatePerfilRequest extends FormRequest
             'nombre.required' => 'El nombre es obligatorio.',
 
             'email.required' => 'El correo electrónico es obligatorio.',
-            'email.email'    => 'Ingresa un correo electrónico válido.',
-            'email.unique'   => 'Este correo electrónico ya está registrado.',
+            'email.email' => 'Ingresa un correo electrónico válido.',
+            'email.unique' => 'Este correo electrónico ya está registrado.',
 
             'ingreso_mensual.prohibited' => 'El administrador no tiene ingreso mensual.',
-            'ingreso_mensual.integer'    => 'El ingreso mensual debe ser un número entero.',
-            'ingreso_mensual.min'        => 'El ingreso mensual no puede ser negativo.',
+            'ingreso_mensual.integer' => 'El ingreso mensual debe ser un número entero.',
+            'ingreso_mensual.min' => 'El ingreso mensual no puede ser negativo.',
 
-            'contrasena_actual.required'         => 'Ingresa tu contraseña actual para cambiar el correo o la contraseña.',
+            'contrasena_actual.required' => 'Ingresa tu contraseña actual para cambiar el correo o la contraseña.',
             'contrasena_actual.current_password' => 'La contraseña actual no es correcta.',
 
-            'nueva_contrasena.min'       => 'La nueva contraseña debe tener al menos 8 caracteres.',
+            'nueva_contrasena.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
             'nueva_contrasena.confirmed' => 'La confirmación de la nueva contraseña no coincide.',
+
+            'foto_perfil.image' => 'La foto debe ser una imagen válida.',
+            'foto_perfil.mimes' => 'La foto debe ser JPG, PNG o WebP.',
+            'foto_perfil.max'   => 'La foto no puede superar los 2 MB.',
         ];
     }
 }

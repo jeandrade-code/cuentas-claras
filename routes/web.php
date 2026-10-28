@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SitemapController;
+
 
 /*
  * ==============================================================================
@@ -28,9 +30,44 @@ use Illuminate\Support\Facades\Route;
  * ==============================================================================
  */
 
+// Ruta dinámica para robots.txt
+Route::get('/robots.txt', function () {
+    // route('sitemap') generará automáticamente la URL absoluta correcta
+    // basándose en tu archivo .env (APP_URL).
+    $sitemapUrl = route('sitemap');
+    
+    $content = "User-agent: *\n";
+    $content .= "Disallow: /panel\n";
+    $content .= "Disallow: /gastos\n";
+    $content .= "Disallow: /gastos-fijos\n";
+    $content .= "Disallow: /creditos\n";
+    $content .= "Disallow: /metas\n";
+    $content .= "Disallow: /informes\n";
+    $content .= "Disallow: /ajustes\n";
+    $content .= "Disallow: /admin/\n";
+    $content .= "Disallow: /notificaciones\n";
+    $content .= "Disallow: /categorias\n";
+    $content .= "Disallow: /iniciar-sesion\n";
+    $content .= "Disallow: /crear-usuario\n";
+    $content .= "Disallow: /recuperar-contrasena\n";
+    $content .= "Disallow: /restablecer-contrasena/\n\n";
+    
+    // Aquí inyectamos la URL absoluta generada dinámicamente
+    $content .= "Sitemap: " . $sitemapUrl;
+
+    return response($content, 200)
+        ->header('Content-Type', 'text/plain');
+})->name('robots');
+
 // GRUPO A - PÚBLICAS
 require __DIR__.'/modulos/publico.php';   // Nikol (N5)
 require __DIR__.'/modulos/auth.php';      // Juan  (J3)
+
+// ==========================================
+// RUTA DEL SITEMAP (PÚBLICA)
+// ==========================================
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
 
 // GRUPOS B a E - PRIVADAS
 Route::middleware(['sesion.inactividad', 'auth', 'cuenta.activa'])->group(function () {
