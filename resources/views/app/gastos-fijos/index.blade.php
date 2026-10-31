@@ -16,6 +16,17 @@
                     <p>Controla tus pagos recurrentes y mantente al día.</p>
                 </div>
             </header>
+            <div class="sm:hidden">
+                <a href="{{ route('gastos.create', ['tipo' => 'fijo']) }}"
+                    class="gf-button gf-button-primary gf-button-icono">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"
+                        aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span>Agregar gasto fijo</span>
+                </a>
+            </div>
 
             @if (session('exito'))
                 <div class="gf-alert gf-alert-success" role="status">
@@ -56,76 +67,6 @@
                         </article>
                     @endforeach
                 </div>
-            </section>
-
-            {{-- FORMULARIO PARA CREAR --}}
-            <section class="gf-section" id="crear-gasto" data-tour="gf-form">
-                <div class="gf-section-heading">
-                    <div>
-                        <h2>Agregar gasto fijo</h2>
-                        <p>Registra un pago que se repite cada mes.</p>
-                    </div>
-                </div>
-                <form action="{{ route('gastos-fijos.store') }}" method="POST" class="gf-form">
-                    @csrf
-                    <div class="gf-form-grid">
-                        <div class="gf-field">
-                            <label for="crear_nombre">Nombre del gasto</label>
-                            <input id="crear_nombre" type="text" name="nombre" maxlength="100" value="{{ old('nombre') }}"
-                                placeholder="Ej. Arriendo" required>
-                            @error('nombre')
-                                <small class="gf-field-error">{{ $message }}</small>
-                            @enderror
-                        </div>
-                        <div class="gf-field">
-                            <label for="crear_monto">Monto mensual (COP)</label>
-                            <input id="crear_monto" type="number" name="monto" min="1" step="1" value="{{ old('monto') }}"
-                                placeholder="Ej. 800000" required>
-                            @error('monto')
-                                <small class="gf-field-error">{{ $message }}</small>
-                            @enderror
-                        </div>
-                        <div class="gf-field">
-                            <label for="crear_dia">Día de vencimiento</label>
-                            <input id="crear_dia" type="number" name="dia_vencimiento" min="1" max="31"
-                                value="{{ old('dia_vencimiento') }}" placeholder="Del 1 al 31" required>
-                            @error('dia_vencimiento')
-                                <small class="gf-field-error">{{ $message }}</small>
-                            @enderror
-                        </div>
-                        <div class="gf-field">
-                            <label for="crear_categoria">Categoría</label>
-                            <select id="crear_categoria" name="categoria_id" required>
-                                <option value="">Selecciona una categoría</option>
-                                @foreach ($categorias as $categoria)
-                                    <option value="{{ $categoria->id }}" @selected((string) old('categoria_id') === (string) $categoria->id)>
-                                        {{ $categoria->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('categoria_id')
-                                <small class="gf-field-error">{{ $message }}</small>
-                            @enderror
-                        </div>
-                        <input type="hidden" name="periodicidad" value="mensual">
-                        <div class="gf-field gf-field-full">
-                            <label for="crear_descripcion">Descripción (opcional)</label>
-                            <input id="crear_descripcion" type="text" name="descripcion" maxlength="100"
-                                value="{{ old('descripcion') }}" placeholder="Agrega una nota si lo necesitas">
-                            @error('descripcion')
-                                <small class="gf-field-error">{{ $message }}</small>
-                            @enderror
-                        </div>
-                    </div>
-                    <button class="gf-button gf-button-primary gf-button-icono" type="submit">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"
-                            aria-hidden="true">
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
-                        <span>Agregar gasto fijo</span>
-                    </button>
-                </form>
             </section>
 
             {{-- LISTA DE GASTOS --}}
@@ -335,7 +276,8 @@
                             </svg>
                         </span>
                         <h3>Aún no tienes gastos fijos</h3>
-                        <p>Agrega tu primer gasto fijo en el formulario de arriba.</p>
+                        <p>Agrega tu primer gasto fijo con el botón <a
+                                href="{{ route('gastos.create', ['tipo' => 'fijo']) }}">Agregar gasto fijo</a>.</p>
                     </div>
                 @endforelse
             </section>

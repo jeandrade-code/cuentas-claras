@@ -43,8 +43,9 @@ ESTILOS : public/css/menu-usuario.css · SCRIPT: public/js/shell.js (sección 4)
   </div>
 
   <div class="flex items-center gap-3">
-    @if(!$esAdministrador && !request()->routeIs('panel'))
-        <a class="hidden sm:inline-flex items-center gap-1.5 py-1.5 px-space-md bg-surface-container hover:bg-surface-container-high text-primary rounded-lg font-label-md text-label-md transition-colors"
+    @if(!$esAdministrador)
+        <a data-tour="nuevo-gasto"
+          class="hidden md:inline-flex items-center gap-1.5 py-1.5 px-space-md bg-surface-container hover:bg-surface-container-high text-primary rounded-lg font-label-md text-label-md transition-colors"
           href="{{ route('gastos.create') }}">
             <span class="material-symbols-outlined text-[18px]">add</span>
             <span>Nuevo Gasto</span>

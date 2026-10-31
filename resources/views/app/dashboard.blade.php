@@ -22,9 +22,9 @@ $metas (solo familiar), $esUsuarioNuevo
 
         {{-- A) Saludo y acciones rápidas --}}
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-space-md py-space-md mb-space-md">
-          <div class="flex flex-col gap-1">
+          <div class="flex flex-col gap-1 min-w-0">
             <div class="flex items-center gap-space-sm flex-wrap">
-              <h1 class="font-headline-xl text-headline-xl text-on-surface tracking-tight">
+              <h1 class="font-headline-xl text-headline-xl text-on-surface tracking-tight break-words">
                 Hola, {{ auth()->user()->nombre }}
               </h1>
             </div>
@@ -35,16 +35,12 @@ $metas (solo familiar), $esUsuarioNuevo
             </div>
           </div>
 
-          <div class="flex items-center gap-space-sm flex-wrap">
+          {{-- Botón "Nuevo Gasto": solo en móvil (en escritorio lo muestra el topbar). --}}
+          <div class="md:hidden" data-tour="nuevo-gasto-movil">
             <a href="{{ route('gastos.create') }}"
-              class="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:opacity-95 transition-all active:scale-[0.98]">
+              class="w-full inline-flex items-center justify-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:opacity-95 transition-all active:scale-[0.98]">
               <span class="material-symbols-outlined text-[20px]">add_circle</span>
-              <span>Registrar Gasto</span>
-            </a>
-            <a href="{{ route('gastos-fijos.index') }}"
-              class="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container-high transition-all active:scale-[0.98]">
-              <span class="material-symbols-outlined text-[20px] text-secondary">event_repeat</span>
-              <span>Nuevo Gasto Fijo</span>
+              <span>Nuevo Gasto</span>
             </a>
           </div>
         </div>
@@ -52,7 +48,8 @@ $metas (solo familiar), $esUsuarioNuevo
         {{-- B) Tarjeta de bienvenida si el usuario es nuevo.
         Se mantiene OCULTA mientras el tour corre y aparece al terminar. --}}
         @if ($esUsuarioNuevo)
-          <section id="welcome-card" class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm mb-space-lg"
+          <section id="welcome-card"
+            class="bg-surface-container-lowest rounded-xl p-space-md sm:p-space-lg shadow-sm mb-space-lg"
             role="status" style="display: none;">
             <div class="flex items-start gap-space-md">
               <div class="p-2.5 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -69,21 +66,21 @@ $metas (solo familiar), $esUsuarioNuevo
                   <li class="flex items-start gap-2">
                     <span
                       class="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-on-primary font-label-sm text-label-sm">1</span>
-                    <span>Registrar tu ingreso en
+                    <span class="min-w-0">Registrar tu ingreso en
                       <a href="{{ route('ajustes.perfil') }}" class="text-primary underline">Ajustes &gt; Perfil</a>.
                     </span>
                   </li>
                   <li class="flex items-start gap-2">
                     <span
                       class="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-on-primary font-label-sm text-label-sm">2</span>
-                    <span>Crear tu primer
+                    <span class="min-w-0">Crear tu primer
                       <a href="{{ route('gastos.create') }}" class="text-primary underline">gasto</a>.
                     </span>
                   </li>
                   <li class="flex items-start gap-2">
                     <span
                       class="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-on-primary font-label-sm text-label-sm">3</span>
-                    <span>Registrar tu primer
+                    <span class="min-w-0">Registrar tu primer
                       <a href="{{ route('gastos-fijos.index') }}" class="text-primary underline">gasto fijo</a>.
                     </span>
                   </li>
@@ -129,18 +126,20 @@ $metas (solo familiar), $esUsuarioNuevo
             @endphp
 
             <div
-              class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between mb-space-xs">
+              class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm flex flex-col justify-between min-w-0 hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between gap-2 mb-space-xs">
                 <span class="font-label-md text-label-md text-secondary">{{ $item['titulo'] }}</span>
-                <span class="p-1 rounded-lg bg-surface-container {{ $colorIcono }}">
+                <span class="p-1 rounded-lg bg-surface-container shrink-0 {{ $colorIcono }}">
                   <span class="material-symbols-outlined text-[18px]">{{ $icono }}</span>
                 </span>
               </div>
 
-              <div class="flex flex-col gap-1">
-                <div class="font-numeric-lg text-numeric-lg tracking-tight {{ $esFijos ? 'text-error' : 'text-on-surface' }}">
+              <div class="flex flex-col gap-1 min-w-0">
+                {{-- flex-wrap: si el monto es largo, "COP" baja a la línea siguiente en vez de desbordar. --}}
+                <div
+                  class="flex flex-wrap items-baseline gap-x-1 font-numeric-lg text-numeric-lg tracking-tight {{ $esFijos ? 'text-error' : 'text-on-surface' }}">
                   @if ($item['es_dinero'])
-                    ${{ number_format((int) $item['valor'], 0, ',', '.') }}
+                    <span>${{ number_format((int) $item['valor'], 0, ',', '.') }}</span>
                     <span class="font-label-sm text-label-sm text-secondary font-normal">COP</span>
                   @else
                     {{ (int) $item['valor'] }}
@@ -149,7 +148,7 @@ $metas (solo familiar), $esUsuarioNuevo
 
                 @if ($esGastos && $porcentajeGasto !== null)
                   <div class="flex items-center gap-1.5 font-label-sm text-label-sm text-secondary mt-1">
-                    <div class="w-16 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
+                    <div class="w-16 shrink-0 bg-surface-container-high rounded-full h-1.5 overflow-hidden">
                       <div class="bg-secondary h-full rounded-full" style="width: {{ min(100, $porcentajeGasto) }}%"></div>
                     </div>
                     <span>{{ $porcentajeGasto }}% del total mensual</span>
@@ -216,7 +215,7 @@ $metas (solo familiar), $esUsuarioNuevo
                             <div class="font-headline-sm text-headline-sm text-on-surface truncate">
                               {{ $pago->gastoFijo?->nombre ?? 'Gasto fijo' }}
                             </div>
-                            <div class="flex items-center gap-2 mt-0.5">
+                            <div class="flex flex-wrap items-center gap-2 mt-0.5">
                               <span
                                 class="px-2 py-0.5 rounded-md bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
                                 Vence el {{ $pago->fecha_vencimiento->format('d/m/Y') }}
@@ -266,7 +265,7 @@ $metas (solo familiar), $esUsuarioNuevo
               <div class="flex flex-col gap-2">
                 @forelse ($ultimosGastos as $gasto)
                   <div
-                    class="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container-low transition-colors group">
+                    class="flex items-center justify-between gap-space-sm p-3 rounded-lg hover:bg-surface-container-low transition-colors group">
                     <div class="flex items-center gap-space-md min-w-0">
                       <div
                         class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
@@ -276,7 +275,7 @@ $metas (solo familiar), $esUsuarioNuevo
                         <div class="font-headline-sm text-headline-sm text-on-surface truncate">
                           {{ $gasto->descripcion ?: ($gasto->categoria?->nombre ?? 'Gasto') }}
                         </div>
-                        <div class="flex items-center gap-2 text-secondary font-body-sm text-body-sm">
+                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-secondary font-body-sm text-body-sm">
                           <span>{{ $gasto->fecha->format('d/m/Y') }}</span>
                           @if ($gasto->categoria)
                             <span>•</span>
@@ -286,9 +285,16 @@ $metas (solo familiar), $esUsuarioNuevo
                             </span>
                           @endif
                         </div>
+
+                        {{-- Móvil: el monto va debajo de la descripción y la fecha. --}}
+                        <div class="sm:hidden mt-1 font-numeric-md text-numeric-md text-error font-semibold tracking-tight">
+                          -${{ number_format((int) $gasto->monto, 0, ',', '.') }}
+                        </div>
                       </div>
                     </div>
-                    <div class="flex items-center gap-space-md">
+
+                    {{-- Escritorio/tablet: el monto queda a la derecha. --}}
+                    <div class="hidden sm:flex items-center gap-space-md shrink-0">
                       <span class="font-numeric-md text-numeric-md text-error font-semibold tracking-tight">
                         -${{ number_format((int) $gasto->monto, 0, ',', '.') }}
                       </span>
@@ -305,18 +311,18 @@ $metas (solo familiar), $esUsuarioNuevo
           </div>
 
           {{-- Columna derecha (4/12) --}}
-          <div class="lg:col-span-4 flex flex-col gap-space-lg">
+          <div class="lg:col-span-4 flex flex-col gap-space-lg min-w-0">
 
             {{-- E.1 Regla 50/30/20 · TOUR: data-tour="distribucion" --}}
             <div data-tour="distribucion"
               class="bg-surface-container-lowest rounded-xl p-space-md sm:p-space-lg shadow-sm flex flex-col gap-space-md">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-[22px]">pie_chart</span>
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="material-symbols-outlined text-primary text-[22px] shrink-0">pie_chart</span>
                   <h2 class="font-headline-sm text-headline-sm text-on-surface">Regla 50 / 30 / 20</h2>
                 </div>
                 <span
-                  class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container text-secondary font-medium">
+                  class="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container text-secondary font-medium shrink-0">
                   {{ now()->locale('es')->translatedFormat('F') }}
                 </span>
               </div>
@@ -342,7 +348,7 @@ $metas (solo familiar), $esUsuarioNuevo
                   <div class="bg-tertiary-container h-full" style="width: {{ $wDis }}%" title="Discrecionales"></div>
                   <div class="bg-secondary-fixed-dim h-full" style="width: {{ $wAho }}%" title="Ahorro"></div>
                 </div>
-                <div class="flex justify-between text-[11px] text-secondary font-medium px-0.5">
+                <div class="flex justify-between gap-1 text-[11px] text-secondary font-medium px-0.5">
                   <span>{{ round($pNec) }}% Nec.</span>
                   <span>{{ round($pDis) }}% Disc.</span>
                   <span>{{ round($pAho) }}% Ahorro</span>
@@ -357,10 +363,10 @@ $metas (solo familiar), $esUsuarioNuevo
                     $real = $bloque['porcentaje_real'];
                     $excede = $bloque['estado'] === 'excede';
                   @endphp
-                  <div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-                    <div class="flex items-center gap-2">
-                      <span class="w-2.5 h-2.5 rounded-full bg-{{ $color }}"></span>
-                      <div>
+                  <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-surface-container-low">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="w-2.5 h-2.5 rounded-full shrink-0 bg-{{ $color }}"></span>
+                      <div class="min-w-0">
                         <div class="font-label-md text-label-md text-on-surface">
                           {{ $bloque['nombre'] ?? $clave }} ({{ $recomendado }}%)
                         </div>
@@ -371,14 +377,14 @@ $metas (solo familiar), $esUsuarioNuevo
                     </div>
                     @if ($real === null)
                       <span
-                        class="px-2 py-0.5 rounded bg-surface-container text-secondary font-label-sm text-label-sm font-semibold">—</span>
+                        class="shrink-0 px-2 py-0.5 rounded bg-surface-container text-secondary font-label-sm text-label-sm font-semibold">—</span>
                     @elseif ($excede)
                       <span
-                        class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
+                        class="shrink-0 px-2 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold">
                         Excede +{{ number_format(abs($bloque['diferencia_porcentual']), 0) }}%
                       </span>
                     @else
-                      <span class="px-2 py-0.5 rounded chip-ok font-label-sm text-label-sm font-semibold">Óptimo</span>
+                      <span class="shrink-0 px-2 py-0.5 rounded chip-ok font-label-sm text-label-sm font-semibold">Óptimo</span>
                     @endif
                   </div>
                 @endforeach
@@ -389,18 +395,18 @@ $metas (solo familiar), $esUsuarioNuevo
             @if (auth()->user()->rol === 'familiar')
               <div
                 class="bg-surface-container-lowest rounded-xl p-space-md sm:p-space-lg shadow-sm flex flex-col gap-space-md">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-[22px]">diversity_1</span>
                     <h2 class="font-headline-sm text-headline-sm text-on-surface">Mis metas</h2>
                   </div>
                   <a href="{{ route('metas.index') }}"
-                    class="font-label-sm text-label-sm text-secondary hover:text-primary">Ver todas</a>
+                    class="font-label-sm text-label-sm text-secondary hover:text-primary shrink-0">Ver todas</a>
                 </div>
 
                 @forelse ($metas as $meta)
                   <div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-sm">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between gap-2">
                       <div class="min-w-0">
                         <h3 class="font-headline-sm text-headline-sm text-on-surface truncate">{{ $meta->nombre }}</h3>
                         <p class="font-body-sm text-body-sm text-secondary">
@@ -416,7 +422,8 @@ $metas (solo familiar), $esUsuarioNuevo
                       <div class="bg-primary h-full rounded-full" style="width: {{ $meta->porcentaje() }}%"></div>
                     </div>
 
-                    <div class="flex justify-between items-center font-label-sm text-label-sm text-secondary">
+                    <div
+                      class="flex flex-wrap justify-between items-center gap-x-space-sm gap-y-1 font-label-sm text-label-sm text-secondary">
                       <span>Ahorrado: ${{ number_format($meta->totalConjunto(), 0, ',', '.') }}</span>
                       <span class="font-medium text-on-surface">
                         Objetivo: ${{ number_format((int) $meta->monto_objetivo, 0, ',', '.') }}
@@ -440,14 +447,14 @@ $metas (solo familiar), $esUsuarioNuevo
             {{-- E.3 Notificaciones recientes · TOUR: data-tour="notificaciones" --}}
             <div data-tour="notificaciones"
               class="bg-surface-container-lowest rounded-xl p-space-md sm:p-space-lg shadow-sm flex flex-col gap-space-md">
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-primary text-[22px]">notifications</span>
                   <h2 class="font-headline-sm text-headline-sm text-on-surface">Notificaciones</h2>
                 </div>
                 @if ($notificaciones->isNotEmpty())
                   <a href="{{ route('notificaciones.index') }}"
-                    class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary hover:text-primary transition-colors">
+                    class="inline-flex items-center gap-1 shrink-0 font-label-sm text-label-sm text-secondary hover:text-primary transition-colors">
                     <span>Ver todas</span>
                     <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </a>
@@ -485,15 +492,15 @@ $metas (solo familiar), $esUsuarioNuevo
                 <div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
                   <span class="material-symbols-outlined text-[20px]">calculate</span>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <h3 class="font-headline-sm text-headline-sm text-on-surface">Simulador de Créditos</h3>
                   <p class="font-body-sm text-body-sm text-secondary">Evalúa cuotas y sobreendeudamiento</p>
                 </div>
               </div>
               <a href="{{ route('creditos.simulador') }}"
-                class="mt-space-xs inline-flex items-center justify-between p-2.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-md text-label-md">
+                class="mt-space-xs inline-flex items-center justify-between gap-2 p-2.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-label-md text-label-md">
                 <span>Calcular nueva cuota segura</span>
-                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                <span class="material-symbols-outlined text-[18px] shrink-0">chevron_right</span>
               </a>
             </div>
 
@@ -504,8 +511,7 @@ $metas (solo familiar), $esUsuarioNuevo
 
     {{-- TOUR: lanza el recorrido guiado la primera vez que se visita el dashboard. --}}
     <x-onboarding-tour name="dashboard" />
-    {{-- TOUR: lanza el recorrido guiado la primera vez que se visita el dashboard. --}}
-    <x-onboarding-tour name="dashboard" />
+
   @push('scripts')
     {{-- Muestra la tarjeta de bienvenida cuando el tour termina (o de inmediato si ya se vio). --}}
     <script>

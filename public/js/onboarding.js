@@ -48,6 +48,14 @@
                     body: 'Te damos un recorrido rápido por las secciones que más vas a usar. Puedes saltártelo cuando quieras y volver a verlo desde Ajustes.',
                 },
                 {
+                    target: '[data-tour="nuevo-gasto"]',
+                    mobileTarget: '[data-tour="nuevo-gasto-movil"]',
+                    title: 'Registra un gasto',
+                    body: 'Con este botón, disponible arriba en todo momento, registras un gasto normal o un gasto fijo mensual.',
+                    mobileBody: 'Con este botón registras un gasto normal o un gasto fijo mensual. En las demás pantallas lo encuentras igual de a la mano.',
+                    position: 'bottom',
+                },
+                {
                     target: '[data-tour="metricas"]',
                     title: 'Tus números del mes',
                     body: 'Aquí ves de un vistazo cuánto tienes disponible, cuánto has gastado y cuántos gastos fijos te faltan por pagar.',
@@ -137,12 +145,6 @@
                     body: 'Aquí puedes registrar cada egreso, ver cuánto has gastado en el mes y revisar tu historial completo.',
                 },
                 {
-                    target: '[data-tour="gastos-form"]',
-                    title: 'Registrar un gasto',
-                    body: 'Ingresa el monto, la categoría y la fecha. Si es un pago recurrente, cámbialo a "Gasto fijo".',
-                    position: 'bottom',
-                },
-                {
                     target: '[data-tour="gastos-resumen"]',
                     title: 'Resumen del mes',
                     body: 'Un vistazo rápido a cuánto dinero has gastado este mes y cuántos registros llevas.',
@@ -157,6 +159,46 @@
             ]
         },
 
+        'gastos-nuevo': {
+            steps: [
+                {
+                    target: null,
+                    title: 'Registrar un gasto',
+                    body: 'Desde esta pantalla registras tanto gastos normales como gastos fijos mensuales. Te mostramos cómo en unos pasos.',
+                },
+                {
+                    target: '[data-tour="nuevo-tipo"]',
+                    title: '¿Qué tipo de gasto es?',
+                    body: 'Elige "Gasto normal" para una compra o pago puntual, o "Gasto fijo" para un pago que se repite cada mes (arriendo, internet, etc.).',
+                    position: 'bottom',
+                },
+                {
+                    target: '[data-tour="nuevo-monto"]',
+                    title: 'El monto',
+                    body: 'Escribe el valor en pesos. Los puntos de miles se ponen solos, por ejemplo 45.000.',
+                    position: 'bottom',
+                },
+                {
+                    target: '[data-tour="nuevo-categoria"]',
+                    title: 'La categoría',
+                    body: 'Clasifica el gasto para que tu informe 50/30/20 salga correcto. Si no encuentras la que buscas, puedes crear una propia en Categorías.',
+                    position: 'bottom',
+                },
+                {
+                    target: '[data-tour="nuevo-campos"]',
+                    title: 'Datos según el tipo',
+                    body: 'En un gasto normal indicas la fecha y una descripción. En un gasto fijo indicas el nombre y el día de vencimiento (del 1 al 31); te avisaremos 3 días antes.',
+                    position: 'top',
+                },
+                {
+                    target: '[data-tour="nuevo-guardar"]',
+                    title: 'Guarda tu gasto',
+                    body: 'Cuando termines, pulsa guardar. Puedes cancelar para volver a la lista sin registrar nada.',
+                    position: 'top',
+                },
+            ]
+        },
+
         'gastos-fijos': {
             steps: [
                 {
@@ -168,12 +210,6 @@
                     target: '[data-tour="gf-resumen"]',
                     title: 'Estado de tus pagos',
                     body: 'Revisa cuántos gastos has pagado, cuáles están pendientes y si tienes alguno vencido este mes.',
-                    position: 'bottom',
-                },
-                {
-                    target: '[data-tour="gf-form"]',
-                    title: 'Agregar un gasto fijo',
-                    body: 'Ingresa el nombre, el monto, el día de vencimiento (del 1 al 31) y su categoría.',
                     position: 'bottom',
                 },
                 {
