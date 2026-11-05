@@ -4,15 +4,13 @@
  * QUÉ ES  : Estilos del menú del usuario de la barra superior + la "píldora" que
  *           agrupa el botón de tema y el menú del usuario.
  * COMPORTAMIENTO:
- *   - Escritorio con mouse: se abre al pasar el cursor (.menu-usuario:hover).
+ *   - Escritorio con mouse: se abre al pasar el cursor sobre el botón.
  *   - Clic o toque: shell.js agrega .is-open (queda fijo hasta clic afuera o Escape).
- * REGLAS: solo tokens de style.css (var(--...)); sin hexadecimales sueltos.
- * TINTE : usa var(--accent-*) para respetar el tipo de cuenta (verde/morado).
  * ==============================================================================
  */
 
 /* ==========================================================================
-   Píldora de acciones del topbar (botón de tema + menú de usuario)
+   Píldora de acciones del topbar
    ========================================================================== */
 .topbar-acciones {
   display: flex;
@@ -42,7 +40,7 @@
    ========================================================================== */
 .menu-usuario {
   position: relative;
-  display: flex;
+  display: inline-flex; /* inline-flex asegura que el área de hover sea solo el botón */
 }
 
 /* ---- Botón (nombre + avatar + flecha) ---- */
@@ -64,11 +62,6 @@
 .topbar-acciones .menu-usuario__boton:hover,
 .topbar-acciones .menu-usuario.is-open .menu-usuario__boton {
   background: var(--surface-container-high);
-}
-@media (hover: hover) and (pointer: fine) {
-  .topbar-acciones .menu-usuario:hover .menu-usuario__boton {
-    background: var(--surface-container-high);
-  }
 }
 
 .menu-usuario__boton:focus-visible,
@@ -95,7 +88,7 @@
   }
 }
 
-/* ---- Avatar (tintado según tipo de cuenta) ---- */
+/* ---- Avatar ---- */
 .menu-usuario__avatar {
   position: relative;
   display: flex;
@@ -116,7 +109,7 @@
   font-size: 1.125rem;
 }
 
-/* Punto rojo: hay notificaciones pendientes */
+/* Punto rojo: notificaciones pendientes */
 .menu-usuario__punto {
   position: absolute;
   top: -2px;
@@ -151,8 +144,7 @@
   transform: rotate(180deg);
 }
 
-/* ---- Panel desplegable ----
-   El padding-top (puente) mantiene el :hover continuo entre el botón y la tarjeta. */
+/* ---- Panel desplegable ---- */
 .menu-usuario__panel {
   position: absolute;
   top: 100%;
@@ -160,25 +152,33 @@
   z-index: 60;
   width: 18rem;
   max-width: calc(100vw - 2rem);
-  padding-top: .5rem;
+  padding-top: .5rem; /* Puente invisible para que el mouse baje fluido */
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
   transform-origin: top right;
   transition: opacity .15s var(--ease), transform .15s var(--ease), visibility 0s linear .2s;
+  
+  /* LA MAGIA: Desconecta el mouse del panel cuando está cerrado */
+  pointer-events: none; 
 }
+
 .menu-usuario.is-open .menu-usuario__panel {
   opacity: 1;
   visibility: visible;
   transform: none;
   transition-delay: 0s;
+  pointer-events: auto; /* Vuelve a conectar el mouse cuando está abierto */
 }
+
+/* Solo se activa con hover si el dispositivo tiene mouse fino */
 @media (hover: hover) and (pointer: fine) {
   .menu-usuario:hover .menu-usuario__panel {
     opacity: 1;
     visibility: visible;
     transform: none;
     transition-delay: 0s;
+    pointer-events: auto; /* Conecta el mouse al hacer hover */
   }
   .menu-usuario:hover .menu-usuario__flecha {
     transform: rotate(180deg);
@@ -220,7 +220,6 @@
   white-space: nowrap;
 }
 
-/* ---- Etiqueta del rol (tintada según tipo de cuenta) ---- */
 .menu-usuario__etiqueta {
   align-self: flex-start;
   margin-top: .25rem;
@@ -230,7 +229,6 @@
   color: var(--accent-on-fixed);
 }
 
-/* ---- Opciones ---- */
 .menu-usuario__lista {
   padding: .375rem;
 }
@@ -259,7 +257,6 @@
   color: var(--on-surface);
 }
 
-/* ---- Ítem activo (tintado según tipo de cuenta) ---- */
 .menu-usuario__item--activo {
   background: var(--accent-container);
   color: var(--accent-on-container);

@@ -1,457 +1,402 @@
 /*
  * ==============================================================================
- * ARCHIVO : public/css/informes-50-30-20.css
- * QUÉ ES  : Estilos EXCLUSIVOS de: Informe 50/30/20. Se carga después de style.css (vía
- *           @push('styles') en la vista).
- * QUÉ HAY QUE HACER (en orden):
- *   1. Agregar aquí SOLO lo que no se puede resolver con las clases globales.
- * CÓMO HACERLO / NOTAS:
- *   - Ejemplo (texto, no código): barra segmentada y gráficas legibles en móvil.
+ * ARCHIVO : public/css/informes-mejoras.css
+ * QUÉ ES  : Estilos compartidos de las vistas informes/actual e informes/historial.
+ * CARGA   : después de informes-50-30-20.css / informes-historial.css (@push('styles')).
+ * NOTAS   : todo usa tokens de theme.css (claro y oscuro) y --t-* de transiciones.css.
+ *           Los selectores llevan dos clases para ganarle a [data-dinamico] article p.
  * ==============================================================================
  */
-/* ==========================================================
-   INFORME 50/30/20 — MEJORAS VISUALES
-   ========================================================== */
 
-[data-dinamico="informe"] article {
-    border-color: var(--line);
-    border-radius: 16px;
-    background: var(--surface-container-lowest);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+/* ---------- Cabecera ---------- */
+.inf-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inf-cabecera .inf-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  font-size: .875rem;
+  font-weight: 600;
+  text-transform: capitalize;
 }
 
-[data-dinamico="informe"] article:hover {
-    border-color: var(--outline-variant);
-    box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+/* ---------- Avisos ---------- */
+.inf-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--tertiary);
+  border-radius: 12px;
+  background: var(--surface-container-low);
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+}
+.inf-aviso .material-symbols-outlined { color: var(--tertiary); flex-shrink: 0; }
+
+/* ---------- Selector de mes ---------- */
+.inf-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+.inf-selector .inf-selector__campo { display: flex; flex-direction: column; gap: 6px; }
+.inf-selector label { font-size: .85rem; font-weight: 600; color: var(--on-surface-variant); }
+
+/* ---------- Tarjetas de resumen ---------- */
+.inf-resumen {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.inf-stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-container-low);
+}
+.inf-stat .inf-stat__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-container-lowest);
+  color: var(--primary);
+}
+.inf-stat .inf-stat__etiqueta { margin: 0; font-size: .85rem; color: var(--on-surface-variant); }
+.inf-stat .inf-stat__valor {
+  margin: 2px 0 0;
+  font-size: clamp(1.2rem, 2.2vw, 1.6rem);
+  font-weight: 800;
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.inf-stat--negativo .inf-stat__valor,
+.inf-stat--negativo .inf-stat__icono { color: var(--error); }
+
+.inf-uso { margin-top: 20px; }
+.inf-uso .inf-uso__texto {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: .875rem;
+  color: var(--on-surface-variant);
+}
+.inf-uso .inf-uso__texto strong { color: var(--on-surface); }
+
+/* ---------- Barra con marcador de lo recomendado ---------- */
+.inf-barra { position: relative; width: 100%; }
+.inf-barra .inf-barra__pista {
+  height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-container);
+}
+.inf-barra .inf-barra__fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  transition: width var(--t-slower, 340ms) var(--ease-quart, ease);
+}
+.inf-barra .inf-barra__meta {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--on-surface);
+  box-shadow: 0 0 0 2px var(--surface-container-lowest);
 }
 
-[data-dinamico="informe"] article h3 {
-    color: var(--on-surface);
-    font-weight: 700;
+/* ---------- Leyenda ---------- */
+.inf-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 20px;
+  font-size: .85rem;
+  color: var(--on-surface-variant);
+}
+.inf-leyenda .inf-leyenda__item { display: inline-flex; align-items: center; gap: 8px; }
+.inf-punto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ---------- Tarjeta de bloque (50 / 30 / 20) ---------- */
+.inf-bloques {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.inf-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-container-lowest);
+}
+.inf-bloque .inf-bloque__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inf-bloque .inf-bloque__titulo { margin: 0; font-size: 1rem; color: var(--on-surface); }
+.inf-bloque .inf-bloque__pct {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+}
+.inf-bloque .inf-bloque__pct small {
+  margin-left: 6px;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+}
+.inf-bloque .inf-bloque__datos {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: .85rem;
+  color: var(--on-surface-variant);
+}
+.inf-bloque .inf-bloque__datos strong { color: var(--on-surface); }
+.inf-bloque .inf-bloque__mensaje {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: .875rem;
+  line-height: 1.5;
+  color: var(--on-surface-variant);
 }
 
-[data-dinamico="informe"] article > div:first-child > span {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: var(--surface-container);
-    color: var(--on-surface-variant);
-    font-size: 0.78rem;
-    font-weight: 600;
+.inf-nota {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--on-surface-variant);
+}
+.inf-nota strong { color: var(--on-surface); }
+
+/* ---------- Gráficas ---------- */
+.inf-graficas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: center;
+}
+.inf-graficas > * { min-width: 0; }
+.inf-grafica__titulo { margin: 0 0 4px; }
+.inf-grafica__texto { margin: 0 0 16px; color: var(--on-surface-variant); font-size: .9rem; }
+
+.inf-cat-lista { display: flex; flex-direction: column; gap: 16px; }
+.inf-cat .inf-cat__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.inf-cat .inf-cat__nombre { display: inline-flex; align-items: center; gap: 8px; color: var(--on-surface); }
+.inf-cat .inf-cat__monto { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--on-surface); }
+.inf-cat .inf-cat__pista { height: 10px; overflow: hidden; border-radius: 999px; background: var(--surface-container); }
+.inf-cat .inf-cat__fill { height: 100%; border-radius: 999px; transition: width var(--t-slower, 340ms) var(--ease-quart, ease); }
+.inf-cat .inf-cat__share { margin-top: 4px; font-size: .78rem; color: var(--on-surface-variant); }
+
+/* ---------- Detalle por categoría ---------- */
+.inf-filas { display: flex; flex-direction: column; }
+.inf-fila {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.inf-fila:last-child { border-bottom: 0; }
+.inf-fila .inf-fila__nombre { display: inline-flex; align-items: center; gap: 10px; margin: 0; color: var(--on-surface); }
+.inf-fila .inf-fila__monto { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--on-surface); }
+.inf-fila .inf-fila__sub { grid-column: 1 / -1; margin: 0; font-size: .85rem; color: var(--on-surface-variant); }
+
+/* ---------- Guardar / exportar ---------- */
+.inf-acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+.inf-guardado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--on-surface);
+}
+.inf-guardado .material-symbols-outlined { color: var(--save); }
+
+/* ==========================================================================
+   GASTOS HORMIGA (complementa los colores/modo oscuro de informes-50-30-20.css)
+   ========================================================================== */
+.gastos-hormiga { border-left: 4px solid #ef4444; }
+
+.gastos-hormiga .gastos-hormiga__encabezado { flex-wrap: wrap; }
+.gastos-hormiga .gastos-hormiga__intro { flex: 1 1 260px; min-width: 0; }
+.gastos-hormiga .gastos-hormiga__nivel {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--error);
+  font-size: .8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.gastos-hormiga .gastos-hormiga__criterios {
+  margin: 8px 0 0;
+  font-size: .85rem;
+  color: var(--error);
+  opacity: .85;
 }
 
-[data-dinamico="informe"] article p {
-    color: var(--on-surface-variant);
+.gastos-hormiga .gastos-hormiga__barra {
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--error) 14%, transparent);
+}
+.gastos-hormiga .gastos-hormiga__barra > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--error);
+  transition: width var(--t-slower, 340ms) var(--ease-quart, ease);
+}
+.gastos-hormiga .gastos-hormiga__compra-info { flex: 1 1 auto; }
+.gastos-hormiga .gastos-hormiga__compra-info .gastos-hormiga__barra { width: 100%; }
+
+/* ---------- Historial ---------- */
+.inf-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-container-low);
+}
+.inf-filtros .inf-filtros__campo { display: flex; flex-direction: column; gap: 6px; }
+.inf-filtros label { font-size: .85rem; font-weight: 600; color: var(--on-surface-variant); }
+.inf-filtros .inf-filtros__botones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.inf-conteo { margin: 0 0 16px; color: var(--on-surface-variant); font-size: .9rem; }
+
+.inf-hist {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-container-lowest);
+}
+.inf-hist .inf-hist__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inf-hist .inf-hist__mes { margin: 0; text-transform: capitalize; color: var(--on-surface); }
+.inf-hist .inf-hist__fecha { margin: 4px 0 0; font-size: .85rem; color: var(--on-surface-variant); }
+.inf-hist .inf-hist__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.inf-hist .inf-hist__stat {
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--surface-container-low);
+}
+.inf-hist .inf-hist__stat p { margin: 0; }
+.inf-hist .inf-hist__stat .inf-hist__stat-et { font-size: .8rem; color: var(--on-surface-variant); }
+.inf-hist .inf-hist__stat .inf-hist__stat-val {
+  margin-top: 2px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
-[data-dinamico="informe"] article strong {
-    color: var(--on-surface);
-    font-weight: 700;
-}
+.inf-vacio { padding: 48px 16px; text-align: center; }
+.inf-vacio .material-symbols-outlined { font-size: 40px; width: 40px; height: 40px; color: var(--on-surface-variant); }
 
-[data-dinamico="informe"] article [role="img"] {
-    display: block;
-    border-radius: inherit;
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .inf-bloques,
+  .inf-graficas { grid-template-columns: 1fr; }
 }
-
-[data-dinamico="informe"] article [role="img"] > div {
-    border-radius: inherit;
-    transition: width 0.35s ease;
-}
-
-[data-dinamico="informe"] article > div:has([role="img"]) {
-    min-width: 0;
-}
-
-[data-dinamico="informe"] > div {
-    border-color: var(--line);
-    border-radius: 14px;
-}
-
-[data-dinamico="detalle"] article {
-    border-color: var(--line);
-}
-
 @media (max-width: 640px) {
-    [data-dinamico="informe"] article {
-        padding: 16px;
-        margin-bottom: 12px;
-    }
-
-    [data-dinamico="informe"] article > div:first-child {
-        align-items: flex-start;
-    }
-
-    [data-dinamico="informe"] article > div:first-child > span {
-        max-width: 100%;
-        white-space: normal;
-    }
-
-    [data-dinamico="informe"] article [role="img"] {
-        height: 10px !important;
-    }
-}
-
-/* Estilos exclusivos para impresión y exportación a PDF */
-@media print {
-    nav,
-    header,
-    aside,
-    footer,
-    button,
-    [data-exportaciones],
-    form {
-        display: none !important;
-    }
-
-    body {
-        background: #ffffff !important;
-        color: #000000 !important;
-    }
-
-    main {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .card {
-        box-shadow: none !important;
-        break-inside: avoid;
-    }
-
-    * {
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-}
-
-/* ==========================================================
-   GASTOS HORMIGA - ALERTA
-========================================================== */
-
-.gastos-hormiga {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    border: 1px solid #fecaca;
-    border-left: 5px solid #dc2626;
-    border-radius: 18px;
-    background: #fff7f7;
-}
-
-.gastos-hormiga__encabezado {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-}
-
-.gastos-hormiga__icono {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    background: #fee2e2;
-    color: #b91c1c;
-    font-size: 1.5rem;
-}
-
-.gastos-hormiga__etiqueta {
-    margin-bottom: 6px;
-    color: #b91c1c;
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.gastos-hormiga__encabezado h2 {
-    color: #991b1b;
-}
-
-.gastos-hormiga__encabezado p:last-child {
-    color: #7f1d1d;
-}
-
-.gastos-hormiga__indicadores {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.gastos-hormiga__indicador {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 0;
-    padding: 20px;
-    border: 1px solid #fecaca;
-    border-radius: 14px;
-    background: #ffffff;
-}
-
-.gastos-hormiga__indicador span {
-    color: #7f1d1d;
-    font-size: 0.9rem;
-}
-
-.gastos-hormiga__indicador strong {
-    color: #b91c1c;
-    font-size: clamp(1.15rem, 2vw, 1.65rem);
-    font-weight: 800;
-    overflow-wrap: anywhere;
-}
-
-.gastos-hormiga__detalle {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.gastos-hormiga__detalle h3 {
-    color: #991b1b;
-}
-
-.gastos-hormiga__lista {
-    display: flex;
-    flex-direction: column;
-}
-
-.gastos-hormiga__compra {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 15px 0;
-    border-bottom: 1px solid #fecaca;
-}
-
-.gastos-hormiga__compra:last-child {
-    border-bottom: 0;
-}
-
-.gastos-hormiga__compra-info {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-}
-
-.gastos-hormiga__compra-info strong {
-    color: #7f1d1d;
-    overflow-wrap: anywhere;
-}
-
-.gastos-hormiga__compra-info span {
-    color: #7f1d1d;
-    font-size: 0.85rem;
-}
-
-.gastos-hormiga__monto {
-    flex-shrink: 0;
-    color: #b91c1c;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.gastos-hormiga__vacio {
-    padding: 18px;
-    border-radius: 12px;
-    background: #ffffff;
-    color: #7f1d1d;
-}
-
-.gastos-hormiga__recomendacion {
-    display: flex;
-    gap: 12px;
-    padding: 16px;
-    border: 1px solid #fca5a5;
-    border-radius: 12px;
-    background: #fee2e2;
-    color: #7f1d1d;
-    line-height: 1.5;
-}
-
-.gastos-hormiga__recomendacion strong {
-    display: block;
-    margin-bottom: 4px;
-    color: #991b1b;
-}
-
-@media (max-width: 640px) {
-    .gastos-hormiga {
-        padding: 16px;
-        gap: 18px;
-    }
-
-    .gastos-hormiga__indicadores {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-
-    .gastos-hormiga__indicador {
-        padding: 15px;
-    }
-
-    .gastos-hormiga__compra {
-        align-items: flex-start;
-        gap: 10px;
-    }
-}
-
-/* ==========================================================
-   GRÁFICAS DEL INFORME 50/30/20
-   ========================================================== */
-
-/* Contenedores de las gráficas */
-[data-dinamico="informe"],
-[data-dinamico="grafica-categorias"] {
-    min-width: 0;
-}
-
-[data-dinamico="grafica-categorias"] > div {
-    min-width: 0;
-}
-
-/* Cada categoría tiene su propio espacio visual */
-[data-dinamico="grafica-categorias"] > div > div {
-    min-width: 0;
-}
-
-[data-dinamico="grafica-categorias"] > div > div > div:first-child {
-    align-items: center;
-}
-
-/* Fondo de las barras de categorías */
-[data-dinamico="grafica-categorias"] [role="img"] {
-    height: 14px !important;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--surface-container);
-}
-
-/* Relleno de las barras */
-[data-dinamico="grafica-categorias"] [role="img"] > div {
-    min-width: 0;
-    border-radius: 999px;
-    transition: width 0.35s ease;
-}
-
-/* Transición suave al pasar el cursor */
-[data-dinamico="grafica-categorias"] > div > div:hover [role="img"] > div {
-    filter: brightness(1.08);
-}
-
-/* Mejor lectura de los montos */
-[data-dinamico="grafica-categorias"] strong {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-
-/* Distribución real frente a recomendada */
-[data-dinamico="informe"] [role="img"] {
-    min-width: 0;
-    overflow: hidden;
-    border-radius: 999px;
-}
-
-[data-dinamico="informe"] [role="img"] > div {
-    transition: width 0.35s ease;
-}
-
-/* Adaptación a pantallas pequeñas */
-@media (max-width: 640px) {
-    [data-dinamico="grafica-categorias"] [role="img"] {
-        height: 12px !important;
-    }
-
-    [data-dinamico="grafica-categorias"] > div > div > div:first-child {
-        align-items: flex-start;
-    }
+  .inf-resumen,
+  .inf-hist .inf-hist__stats { grid-template-columns: 1fr; }
+  .inf-hist { padding: 16px; }
+  .inf-bloque { padding: 16px; }
+  .inf-filtros .inf-filtros__campo,
+  .inf-filtros .inf-filtros__campo > * { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    [data-dinamico="grafica-categorias"] [role="img"] > div,
-    [data-dinamico="informe"] [role="img"] > div {
-        transition: none;
-    }
+  .inf-barra .inf-barra__fill,
+  .inf-cat .inf-cat__fill,
+  .gastos-hormiga .gastos-hormiga__barra > span { transition: none; }
 }
 
-
-/* ==========================================================
-   GASTOS HORMIGA - MODO OSCURO
-========================================================== */
-
-[data-theme="oscuro"] .gastos-hormiga {
-    background: #1c2128;
-    border-color: #63343a;
-    border-left-color: #f29a9a;
+/* ---------- Impresión ---------- */
+@media print {
+  .inf-bloques,
+  .inf-graficas,
+  .inf-resumen { grid-template-columns: 1fr 1fr 1fr; }
+  .inf-bloque,
+  .inf-stat,
+  .inf-fila,
+  .gastos-hormiga { break-inside: avoid; }
 }
 
-[data-theme="oscuro"] .gastos-hormiga__icono {
-    background: #3a2025;
-    color: #ffb4ab;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__etiqueta {
-    color: #ffb4ab;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__encabezado h2,
-[data-theme="oscuro"] .gastos-hormiga__detalle h3 {
-    color: #ffdad6;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__encabezado p:last-child {
-    color: #d6b6b5;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__indicador {
-    background: #24292f;
-    border-color: #63343a;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__indicador span {
-    color: #d6b6b5;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__indicador strong {
-    color: #ffb4ab;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__compra {
-    border-bottom-color: #434944;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__compra-info strong {
-    color: #e3e6ea;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__compra-info span {
-    color: #b8bfc7;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__monto {
-    color: #ffb4ab;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__vacio {
-    background: #24292f;
-    color: #d6b6b5;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__recomendacion {
-    background: #302126;
-    border-color: #63343a;
-    color: #e3c4c2;
-}
-
-[data-theme="oscuro"] .gastos-hormiga__recomendacion strong {
-    color: #ffdad6;
+.iconos-text-graficas{
+    Display: flex;
+    gap: 8px;
 }

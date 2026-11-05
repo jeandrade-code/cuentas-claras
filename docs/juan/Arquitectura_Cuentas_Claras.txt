@@ -379,6 +379,16 @@ HECHO (Onboarding tour + admin elimina categorías + foto de perfil,
   [x] Sección §17 dedicada a almacenamiento dev/prod.
   [x] Decisión #70.
 
+  Automatización de Informes y Gastos Hormiga:
+  [x] Comando `informes:guardar-mensuales` programado para el día 1 de cada mes a las 00:05.
+      Calcula y guarda el informe del mes anterior para todos los usuarios activos.
+      Idempotente y acepta --fecha para simular.
+  [x] Servicio `App\Services\ServicioGastosHormiga.php` (nuevo). Centraliza la detección
+      de gastos recurrentes (repetición + impacto en el total).
+  [x] Vista `resources/views/app/informes/exportar-word.blade.php` (nuevo). Plantilla Word.
+  [x] Integración de Chart.js para las gráficas (dona y barras) de los informes.
+  [x] Uso de Vite para empaquetar Chart.js (npm install + npm run build).
+
 EN CURSO:
   N5 (Nikol): landing final y páginas legales.
     - En progreso. Reemplaza los Route::view de público.php por vistas completas.
@@ -397,8 +407,6 @@ PENDIENTE J9.2:
   [ ] Auditoría de logs (grep "Log::" app/) no se pudo correr.
   [ ] Script backup-cuentas-claras.sh no está instalado en servidor.
 
-NO HECHO (fuera de J9):
-  [ ] Imágenes de landing (no logo): public/img sigue vacía.
 
 .env DE DESARROLLO: copiar .env.example a .env, php artisan key:generate,
 APP_ENV=local, APP_DEBUG=true, APP_LOCALE=es, DB_CONNECTION=sqlite,
@@ -418,12 +426,14 @@ ENTORNO LOCAL (2026-10-22):
 3. STACK Y CONFIGURACIÓN
 ----------------------------------------------------------------------
   Backend ........ PHP 8.4 + Laravel 11/12 (bootstrap/app.php).
-  Vistas ......... Blade. Sin Vite ni Tailwind compilado.
+  Vistas ......... Blade. Sin Vite compilado para CSS, PERO se usa Vite para empaquetar Chart.js
   Estilos ........ public/css/style.css · theme.css · transiciones.css ·
                    menu-usuario.css + un CSS por pantalla
                    (+ onboarding.css para el tour).
   Scripts ........ shell.js · theme.js · transiciones.js ·
                    simulador-de-creditos.js · crear-usuario.js
+  Build Frontend . npm install && npm install chart.js && npm run build (obligatorio antes de
+                   correr el proyecto para compilar los assets de Chart.js).
                    (+ onboarding.js para el tour).
   Fuentes/íconos . Plus Jakarta Sans (display=swap) + Material Symbols
                    (display=block) + SVGs inline (logo, iconos de categoría,
@@ -582,7 +592,7 @@ RE-AUTENTICACIÓN:
     Providers/AppServiceProvider.php ... (R) View Composer $notificacionesPendientes
     Services/ ................ (R) CalculadoraCredito, ServicioMetas, ServicioCuentas,
                                ServicioGastosFijos, ServicioNotificaciones,
-                               GeneradorInforme, Auditoria.
+                               GeneradorInforme, Auditoria, ServicioGastosHormiga.
     Console/ ................. (R) Commands/GenerarAlertasGastosFijos.php
   bootstrap/app.php .......... (R) alias 'cuenta.activa', 'rol', 'sesion.inactividad'.
                                SecurityHeaders::class appended a todos los requests.
@@ -758,7 +768,7 @@ Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
   POST   /gastos                                          gastos.store                   (HECHO)
   PUT    /gastos/{gasto}                                  gastos.update                  (HECHO)
   DELETE /gastos/{gasto}                                  gastos.destroy                 (HECHO)
-  GET    /gastos/{gasto}/editar                           gastos.edit                    (HECHO - N1)
+  GET    /gastos/{gasto}/editar                           gastos.edit                    (HECHO)
   GET    /categorias                                      categorias.index               (HECHO)
   POST   /categorias                                      categorias.store               (HECHO)
   PUT    /categorias/{categoria}                          categorias.update              (HECHO)
@@ -770,7 +780,7 @@ Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
   POST   /gastos-fijos/{gastoFijo}/pagar                  gastos-fijos.pagar             (HECHO)
   GET    /notificaciones                                  notificaciones.index           (HECHO)
   POST   /notificaciones/leer                             notificaciones.leer            (HECHO)
-  POST   /notificaciones/leer-todas                       notificaciones.leerTodas       (HECHO - N4)
+  POST   /notificaciones/leer-todas                       notificaciones.leerTodas       (HECHO)
   GET    /creditos/simulador                              creditos.simulador             (HECHO)
   POST   /creditos                                        creditos.guardar               (HECHO)
   GET    /creditos/historial                              creditos.historial             (HECHO)
@@ -779,6 +789,8 @@ Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
   POST   /informes/guardar                                informes.guardar               (HECHO)
   GET    /informes/historial                              informes.historial             (HECHO)
   GET    /informes/historial/{id}                         informes.ver                   (HECHO)
+  GET    /informes/exportar/word                          informes.exportar.word         (HECHO)
+  GET    /informes/historico/{id}/word                    informes.historico.word        (HECHO)
   GET    /metas                                           metas.index                    (HECHO)
   POST   /metas                                           metas.store                    (HECHO)
   GET    /metas/invitaciones                              metas.invitaciones             (HECHO)
@@ -2023,7 +2035,18 @@ Fallback (Windows + artisan serve + symlink roto)
   Desventaja: no es portable a producción con S3. Solo si el proyecto es
   escolar y se queda en Windows local.
 
-Checklist al migrar a producción con S3/R2
+CRON DE PRODUCCIÓN (OBLIGATORIO)
+------------------------------------------
+Para que las tareas programadas (alertas:gastos-fijos, informes:guardar-mensuales,
+informes:notificar-disponibles) se ejecuten, el servidor DEBE tener este cron
+corriendo cada minuto:
+
+  * * * * * cd /ruta-del-proyecto && php artisan schedule:run >> /dev/null 2>&1
+
+Sin este cron, los comandos nunca se disparan en producción (aunque estén
+programados en routes/console.php).
+
+Checklist al migrar a producción con S3/R2:
 ------------------------------------------
   [ ] Crear bucket + configurar CORS (si aplica) + permisos públicos de
       lectura.

@@ -14,3 +14,5 @@ Schedule::command('alertas:gastos-fijos')->dailyAt('07:00');
 // Notificación mensual cuando el informe del mes anterior está disponible.
 Schedule::command('informes:notificar-disponibles')
     ->monthlyOn(1, '07:05');
+// Se ejecuta el día 1 de cada mes a las 00:05 AM para guardar informes
+Schedule::command('informes:guardar-mensuales')->monthlyOn(1, '00:05');
