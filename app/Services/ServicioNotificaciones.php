@@ -27,6 +27,7 @@ class ServicioNotificaciones
     public const TIPO_RESPUESTA_META = 'respuesta_meta';
     public const TIPO_META_FINALIZADA = 'meta_finalizada';
     public const TIPO_META_ABANDONADA = 'meta_abandonada';
+    public const TIPO_INFORME_DISPONIBLE = 'informe_disponible';
 
     public const ESTADO_PENDIENTE = 'pendiente';
     public const ESTADO_LEIDA = 'leida';

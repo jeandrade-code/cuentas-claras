@@ -1,12 +1,237 @@
-/*
- * ==============================================================================
- * ARCHIVO : public/css/informes-historial.css
- * QUÉ ES  : Estilos EXCLUSIVOS de: Informes anteriores. Se carga después de style.css (vía
- *           @push('styles') en la vista).
- * QUÉ HAY QUE HACER (en orden):
- *   1. Agregar aquí SOLO lo que no se puede resolver con las clases globales.
- * CÓMO HACERLO / NOTAS:
- *   - Ejemplo (texto, no código): lista por mes.
- * ==============================================================================
- */
 
+/* ==========================================================
+   INFORMES ANTERIORES
+   Estilos exclusivos del historial y sus tarjetas.
+   ========================================================== */
+
+[data-dinamico="informes"] {
+    min-width: 0;
+}
+
+/* Filtros: distribución flexible */
+[data-dinamico="informes"] form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+[data-dinamico="informes"] form > div {
+    min-width: 0;
+}
+
+[data-dinamico="informes"] form label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+[data-dinamico="informes"] form input,
+[data-dinamico="informes"] form select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+[data-dinamico="informes"] form > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Tarjetas de informes */
+[data-dinamico="informes"] article {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 24px;
+    margin-bottom: 20px;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface-container-lowest);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-dinamico="informes"] article:hover {
+    border-color: var(--outline-variant);
+    box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+}
+
+/* Encabezado de cada tarjeta */
+[data-dinamico="informes"] article > div:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+[data-dinamico="informes"] article h3 {
+    color: var(--on-surface);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+[data-dinamico="informes"] article p {
+    color: var(--on-surface-variant);
+    overflow-wrap: anywhere;
+}
+
+[data-dinamico="informes"] article > div:first-child > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: normal;
+}
+
+/* Tarjetas de ingreso y total gastado */
+[data-dinamico="informes"] article > div.grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+[data-dinamico="informes"] article > div.grid > div {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+[data-dinamico="informes"] article > div.grid > div p:last-child {
+    margin-top: 6px;
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+/* Distribución registrada */
+[data-dinamico="informes"] article > div:nth-child(3) {
+    margin-top: 24px;
+}
+
+[data-dinamico="informes"] article h4 {
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+[data-dinamico="informes"] article > div:nth-child(3) > div {
+    padding: 14px 0;
+    border-color: var(--line);
+}
+
+[data-dinamico="informes"] article > div:nth-child(3) > div > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px 16px;
+}
+
+[data-dinamico="informes"] article > div:nth-child(3) strong {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Botón para consultar el informe */
+[data-dinamico="informes"] article > div:last-child {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 24px;
+}
+
+[data-dinamico="informes"] article > div:last-child .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+}
+
+/* Estado vacío y paginación */
+[data-dinamico="informes"] [role="status"] {
+    padding: 32px 16px;
+    overflow-wrap: anywhere;
+}
+
+/* Adaptación a tabletas y celulares */
+@media (max-width: 640px) {
+    [data-dinamico="informes"] article {
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: 14px;
+    }
+
+    [data-dinamico="informes"] form {
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    [data-dinamico="informes"] form > div {
+        width: 100%;
+    }
+
+    [data-dinamico="informes"] form > div:last-child {
+        display: flex;
+        flex-direction: column;
+    }
+
+    [data-dinamico="informes"] form > div:last-child .btn {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+    [data-dinamico="informes"] article > div:first-child {
+        gap: 10px;
+    }
+
+    [data-dinamico="informes"] article > div.grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    [data-dinamico="informes"] article > div.grid > div {
+        padding: 14px;
+    }
+
+    [data-dinamico="informes"] article > div:nth-child(3) {
+        margin-top: 20px;
+    }
+
+    [data-dinamico="informes"] article > div:nth-child(3) > div {
+        padding: 12px 0;
+    }
+
+    [data-dinamico="informes"] article > div:last-child .btn {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* Celulares muy estrechos */
+@media (max-width: 380px) {
+    [data-dinamico="informes"] article {
+        padding: 12px;
+    }
+
+    [data-dinamico="informes"] article > div:first-child > span {
+        font-size: 0.75rem;
+    }
+
+    [data-dinamico="informes"] article > div.grid > div {
+        padding: 12px;
+    }
+}

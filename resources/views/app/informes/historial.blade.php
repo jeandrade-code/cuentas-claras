@@ -22,6 +22,69 @@
         </header>
 
         <section class="card p-space-lg" data-dinamico="informes">
+
+<form action="{{ route('informes.historial') }}"
+      method="GET"
+      class="flex flex-col sm:flex-row sm:items-end flex-wrap gap-space-md mb-space-lg">
+
+    <div class="flex flex-col gap-2">
+        <label for="anio">Año</label>
+        <input
+            type="number"
+            id="anio"
+            name="anio"
+            min="2000"
+            max="{{ now()->year + 5 }}"
+            value="{{ $anioSeleccionado }}"
+            placeholder="Ej. {{ now()->year }}"
+            class="border rounded-lg p-2 w-full sm:w-40"
+        >
+    </div>
+
+    <div class="flex flex-col gap-2">
+        <label for="mes">Mes</label>
+        <select
+            id="mes"
+            name="mes"
+            class="border rounded-lg p-2 w-full sm:w-48"
+        >
+            <option value="">Todos los meses</option>
+            @foreach ([
+                1 => 'Enero',
+                2 => 'Febrero',
+                3 => 'Marzo',
+                4 => 'Abril',
+                5 => 'Mayo',
+                6 => 'Junio',
+                7 => 'Julio',
+                8 => 'Agosto',
+                9 => 'Septiembre',
+                10 => 'Octubre',
+                11 => 'Noviembre',
+                12 => 'Diciembre',
+            ] as $numero => $nombre)
+                <option
+                    value="{{ $numero }}"
+                    @selected((string) $mesSeleccionado === (string) $numero)
+                >
+                    {{ $nombre }}
+                </option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">
+            Filtrar
+        </button>
+
+        <a href="{{ route('informes.historial') }}"
+           class="btn border rounded-lg px-4 py-2">
+            Limpiar filtros
+        </a>
+    </div>
+</form>
+
             <h2 class="font-headline-md text-headline-md text-on-surface mb-space-md">
                 Informes por mes
             </h2>

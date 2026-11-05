@@ -9,4 +9,376 @@
  *   - Ejemplo (texto, no código): barra segmentada y gráficas legibles en móvil.
  * ==============================================================================
  */
+/* ==========================================================
+   INFORME 50/30/20 — MEJORAS VISUALES
+   ========================================================== */
 
+[data-dinamico="informe"] article {
+    border-color: var(--line);
+    border-radius: 16px;
+    background: var(--surface-container-lowest);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-dinamico="informe"] article:hover {
+    border-color: var(--outline-variant);
+    box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+}
+
+[data-dinamico="informe"] article h3 {
+    color: var(--on-surface);
+    font-weight: 700;
+}
+
+[data-dinamico="informe"] article > div:first-child > span {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+[data-dinamico="informe"] article p {
+    color: var(--on-surface-variant);
+}
+
+[data-dinamico="informe"] article strong {
+    color: var(--on-surface);
+    font-weight: 700;
+}
+
+[data-dinamico="informe"] article [role="img"] {
+    display: block;
+    border-radius: inherit;
+}
+
+[data-dinamico="informe"] article [role="img"] > div {
+    border-radius: inherit;
+    transition: width 0.35s ease;
+}
+
+[data-dinamico="informe"] article > div:has([role="img"]) {
+    min-width: 0;
+}
+
+[data-dinamico="informe"] > div {
+    border-color: var(--line);
+    border-radius: 14px;
+}
+
+[data-dinamico="detalle"] article {
+    border-color: var(--line);
+}
+
+@media (max-width: 640px) {
+    [data-dinamico="informe"] article {
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+
+    [data-dinamico="informe"] article > div:first-child {
+        align-items: flex-start;
+    }
+
+    [data-dinamico="informe"] article > div:first-child > span {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    [data-dinamico="informe"] article [role="img"] {
+        height: 10px !important;
+    }
+}
+
+/* Estilos exclusivos para impresión y exportación a PDF */
+@media print {
+    nav,
+    header,
+    aside,
+    footer,
+    button,
+    [data-exportaciones],
+    form {
+        display: none !important;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        break-inside: avoid;
+    }
+
+    * {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}
+
+/* ==========================================================
+   GASTOS HORMIGA - ALERTA
+========================================================== */
+
+.gastos-hormiga {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    border: 1px solid #fecaca;
+    border-left: 5px solid #dc2626;
+    border-radius: 18px;
+    background: #fff7f7;
+}
+
+.gastos-hormiga__encabezado {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.gastos-hormiga__icono {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 1.5rem;
+}
+
+.gastos-hormiga__etiqueta {
+    margin-bottom: 6px;
+    color: #b91c1c;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.gastos-hormiga__encabezado h2 {
+    color: #991b1b;
+}
+
+.gastos-hormiga__encabezado p:last-child {
+    color: #7f1d1d;
+}
+
+.gastos-hormiga__indicadores {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.gastos-hormiga__indicador {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #fecaca;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.gastos-hormiga__indicador span {
+    color: #7f1d1d;
+    font-size: 0.9rem;
+}
+
+.gastos-hormiga__indicador strong {
+    color: #b91c1c;
+    font-size: clamp(1.15rem, 2vw, 1.65rem);
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.gastos-hormiga__detalle {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.gastos-hormiga__detalle h3 {
+    color: #991b1b;
+}
+
+.gastos-hormiga__lista {
+    display: flex;
+    flex-direction: column;
+}
+
+.gastos-hormiga__compra {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 15px 0;
+    border-bottom: 1px solid #fecaca;
+}
+
+.gastos-hormiga__compra:last-child {
+    border-bottom: 0;
+}
+
+.gastos-hormiga__compra-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.gastos-hormiga__compra-info strong {
+    color: #7f1d1d;
+    overflow-wrap: anywhere;
+}
+
+.gastos-hormiga__compra-info span {
+    color: #7f1d1d;
+    font-size: 0.85rem;
+}
+
+.gastos-hormiga__monto {
+    flex-shrink: 0;
+    color: #b91c1c;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.gastos-hormiga__vacio {
+    padding: 18px;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #7f1d1d;
+}
+
+.gastos-hormiga__recomendacion {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #fca5a5;
+    border-radius: 12px;
+    background: #fee2e2;
+    color: #7f1d1d;
+    line-height: 1.5;
+}
+
+.gastos-hormiga__recomendacion strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #991b1b;
+}
+
+@media (max-width: 640px) {
+    .gastos-hormiga {
+        padding: 16px;
+        gap: 18px;
+    }
+
+    .gastos-hormiga__indicadores {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .gastos-hormiga__indicador {
+        padding: 15px;
+    }
+
+    .gastos-hormiga__compra {
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+/* ==========================================================
+   GRÁFICAS DEL INFORME 50/30/20
+   ========================================================== */
+
+/* Contenedores de las gráficas */
+[data-dinamico="informe"],
+[data-dinamico="grafica-categorias"] {
+    min-width: 0;
+}
+
+[data-dinamico="grafica-categorias"] > div {
+    min-width: 0;
+}
+
+/* Cada categoría tiene su propio espacio visual */
+[data-dinamico="grafica-categorias"] > div > div {
+    min-width: 0;
+}
+
+[data-dinamico="grafica-categorias"] > div > div > div:first-child {
+    align-items: center;
+}
+
+/* Fondo de las barras de categorías */
+[data-dinamico="grafica-categorias"] [role="img"] {
+    height: 14px !important;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-container);
+}
+
+/* Relleno de las barras */
+[data-dinamico="grafica-categorias"] [role="img"] > div {
+    min-width: 0;
+    border-radius: 999px;
+    transition: width 0.35s ease;
+}
+
+/* Transición suave al pasar el cursor */
+[data-dinamico="grafica-categorias"] > div > div:hover [role="img"] > div {
+    filter: brightness(1.08);
+}
+
+/* Mejor lectura de los montos */
+[data-dinamico="grafica-categorias"] strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Distribución real frente a recomendada */
+[data-dinamico="informe"] [role="img"] {
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 999px;
+}
+
+[data-dinamico="informe"] [role="img"] > div {
+    transition: width 0.35s ease;
+}
+
+/* Adaptación a pantallas pequeñas */
+@media (max-width: 640px) {
+    [data-dinamico="grafica-categorias"] [role="img"] {
+        height: 12px !important;
+    }
+
+    [data-dinamico="grafica-categorias"] > div > div > div:first-child {
+        align-items: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-dinamico="grafica-categorias"] [role="img"] > div,
+    [data-dinamico="informe"] [role="img"] > div {
+        transition: none;
+    }
+}
