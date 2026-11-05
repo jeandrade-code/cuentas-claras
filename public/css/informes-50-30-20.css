@@ -382,3 +382,76 @@
         transition: none;
     }
 }
+
+
+/* ==========================================================
+   GASTOS HORMIGA - MODO OSCURO
+========================================================== */
+
+[data-theme="oscuro"] .gastos-hormiga {
+    background: #1c2128;
+    border-color: #63343a;
+    border-left-color: #f29a9a;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__icono {
+    background: #3a2025;
+    color: #ffb4ab;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__etiqueta {
+    color: #ffb4ab;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__encabezado h2,
+[data-theme="oscuro"] .gastos-hormiga__detalle h3 {
+    color: #ffdad6;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__encabezado p:last-child {
+    color: #d6b6b5;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__indicador {
+    background: #24292f;
+    border-color: #63343a;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__indicador span {
+    color: #d6b6b5;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__indicador strong {
+    color: #ffb4ab;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__compra {
+    border-bottom-color: #434944;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__compra-info strong {
+    color: #e3e6ea;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__compra-info span {
+    color: #b8bfc7;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__monto {
+    color: #ffb4ab;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__vacio {
+    background: #24292f;
+    color: #d6b6b5;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__recomendacion {
+    background: #302126;
+    border-color: #63343a;
+    color: #e3c4c2;
+}
+
+[data-theme="oscuro"] .gastos-hormiga__recomendacion strong {
+    color: #ffdad6;
+}
