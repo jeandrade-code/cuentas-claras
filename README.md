@@ -15,8 +15,8 @@ Institución Universitaria Antonio José Camacho, 2026.
 ## Stack
 
 - **Backend:** PHP 8.2+ · Laravel 11/12 (`bootstrap/app.php`, sin `Kernel.php`)
-- **Vistas:** Blade + CSS propio (sin Vite ni Tailwind compilado)
-- **Base de datos:** SQLite en desarrollo · SQLite en memoria para pruebas
+- **Vistas:** Blade + CSS propio
+- **Base de datos:** SQLite | MySQL  
 - **Tema:** claro / oscuro con persistencia en `localStorage` · tinte por rol
   (verde estándar · morado familiar · azul administrador)
 - **Correos:** Blade con identidad de marca (verificación de cambio de correo + restablecer
@@ -26,11 +26,9 @@ Institución Universitaria Antonio José Camacho, 2026.
 
 ## Requisitos
 
-- PHP ≥ 8.2 con extensiones `pdo_sqlite`, `mbstring`, `openssl`
+- PHP ≥ 8.2 con extensiones `pdo_sqlite`, `pdo_mysql`,`mbstring`, `openssl`
 - Composer 2
 - Git
-
-No se necesita Node/npm: el proyecto no usa Vite ni compilación de assets.
 
 ---
 
