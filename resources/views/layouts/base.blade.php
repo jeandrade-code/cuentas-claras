@@ -165,11 +165,16 @@
         }
       })();
     </script>
-    <script src="{{ asset('js/transiciones.js') }}" defer></script>
-    <script src="{{ asset('js/theme.js') }}" defer></script>
-    <script src="{{ asset('js/shell.js') }}" defer></script>
+    
+<script src="{{ asset('js/transiciones.js') }}" defer></script>
+<script src="{{ asset('js/theme.js') }}" defer></script>
+<script src="{{ asset('js/shell.js') }}" defer></script>
 
-    {{-- Los scripts de cada vista van aquí, al final del body --}}
-    @stack('scripts')
+{{-- JavaScript de la aplicación y gráficas Chart.js --}}
+@vite('resources/js/app.js')
+
+{{-- Los scripts de cada vista van aquí, al final del body --}}
+@stack('scripts')
+
   </body>
 </html>

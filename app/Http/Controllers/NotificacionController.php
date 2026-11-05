@@ -73,6 +73,18 @@ class NotificacionController extends Controller
             return redirect()->route('metas.invitaciones');
         }
 
+        if ($notificacion->tipo === ServicioNotificaciones::TIPO_INFORME_DISPONIBLE) {
+    if (preg_match(
+        '/^informe_disponible:(\d{4}-\d{2})$/',
+        $notificacion->clave_unica ?? '',
+        $coincidencias
+    )) {
+        return redirect()->route('informes.actual', [
+            'mes' => $coincidencias[1],
+        ]);
+    }
+}
+
         if (
             $notificacion->meta_id !== null
             && in_array($notificacion->tipo, [

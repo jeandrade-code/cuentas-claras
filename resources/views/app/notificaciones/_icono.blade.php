@@ -11,6 +11,7 @@
         'respuesta_meta' => 'forum',
         'meta_finalizada' => 'celebration',
         'meta_abandonada' => 'push_pin',
+        'informe_disponible' => 'description',
         default => 'notifications',
     } }}
   </span>
