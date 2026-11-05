@@ -549,7 +549,7 @@ class InformeController extends Controller
      *
      * No guarda ni modifica registros.
      */
-    private function calcularMes(
+    public function calcularMes(
         User $usuario,
         Carbon $fecha,
         GeneradorInforme $generador
