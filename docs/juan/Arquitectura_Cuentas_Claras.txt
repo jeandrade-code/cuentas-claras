@@ -4,14 +4,55 @@ Documento de contexto para cualquier persona o IA que vaya a trabajar en el cód
 ======================================================================
 Leer completo antes de escribir código. Resume QUÉ es el sistema, QUÉ está hecho,
 QUÉ falta, CÓMO está organizado, TODAS las rutas y las reglas que no se pueden romper.
-Versión: después de J1..J8, J6, J5, V1..V5, N1..N5, verificación de correo, rediseño
-del correo de reset, restricción de Ajustes al admin, página 404, expiración de
-sesión, iconografía por categoría, íconos personalizables, dashboard del admin,
-mejoras de seguridad de J9 (auditoría, notificaciones, CSP, re-auth, throttles),
-ONBOARDING TOUR, ADMIN ELIMINA CATEGORÍAS y FOTO DE PERFIL.
-Fecha: 2026-10-22 (v2).
+Versión: v3 — verificación directa del código real (2026-11-12), sobre la base de v2
+(2026-10-22).
+Fecha: 2026-11-12 (v3).
 
-Cambios respecto al 2026-10-22 (v1):
+CAMBIOS RESPECTO A v2 (2026-10-22)  [NUEVO v3]:
+  · Conteo real de rutas: 76 mostradas por `php artisan route:list --except-vendor`
+    (75 con nombre + Route::fallback()). El v2 decía 70 (69 + fallback).
+  · Se agregaron a la lista de rutas (existen en el código, no en v2):
+      - GET  /robots.txt               (closure en routes/web.php)
+      - GET  /sitemap.xml              (SitemapController@index)
+      - GET  /informes/exportar/csv
+      - GET  /informes/exportar/word
+      - GET  /informes/historial/{id}/exportar/csv
+      - GET  /informes/historial/{id}/exportar/word
+  · Existe un SitemapController (no estaba en v2).
+  · Existen TRES comandos programados (no uno):
+      - alertas:gastos-fijos              (diario 07:00)
+      - informes:guardar-mensuales        (mensual, día 1 a las 00:05)
+      - informes:notificar-disponibles    (mensual, día 1 a las 07:05)
+  · Tipo de notificación nuevo real: 'informe_disponible'
+    (clave_unica = "informe_disponible:{YYYY-MM}").
+  · "Gastos hormiga": el código NO usa ServicioGastosHormiga. La regla vigente
+    está inline en InformeController::calcularMes() y es distinta
+    (frecuencia >= 5 && porcentaje >= 5). ServicioGastosHormiga existe como
+    código muerto (regla monto <= 20000 && frecuencia >= 3). Ver §18.
+  · GastoController@index y @create tienen `if (!auth()->check()) {
+    auth()->loginUsingId(1); }` — bug de desarrollo, ver §18.
+  · GastoController y CategoriaController NO llaman $this->authorize;
+    comparan user_id manualmente. Funciona, pero es inconsistencia. Ver §18.
+  · GastoController@store/update NO filtra categoria_id por dueño
+    (usa `exists:categorias,id`). Ver §18.
+  · User::registrarLogin($ip, $userAgent) ignora el $userAgent; solo persiste
+    IP y fecha con forceFill. Ver §18.
+  · Meta::esCompartida() devuelve true si el atributo no está cargado. Ver §18.
+  · AjustesController@actualizarPerfil usa app(ServicioCuentas::class) inline
+    pese a tener $this->cuentas inyectado. Ver §18.
+  · ConfirmarCambioCorreo implementa Queueable (NO ShouldQueue).
+    AlertaSeguridad SÍ implementa ShouldQueue.
+  · Mensajes reales del código actualizados en §11 (muchos llevan
+    "correctamente.").
+  · Documentada la base PoliticaDeDueno (abstract) que comparten Gasto,
+    GastoFijo, SimulacionCredito, Notificacion, Informe y AporteMeta.
+  · Documentados lockForUpdate() y DB::transaction en ServicioMetas::invitar
+    y ServicioGastosFijos::marcarPagado.
+  · Nueva §18 con DEUDA TÉCNICA Y DISCREPANCIAS CONOCIDAS.
+  · Nueva §19 "Cómo correr el proyecto" con comandos, cuentas semilla y
+    pruebas de comandos con --fecha.
+
+CAMBIOS v2 RESPECTO A v1 (2026-10-22, se conservan tal cual):
   · ONBOARDING TOUR (motor sin dependencias):
     - public/js/onboarding.js + public/css/onboarding.css.
     - Componente <x-onboarding-tour name="..." :auto-start="..." />.
@@ -44,9 +85,6 @@ Cambios respecto al 2026-10-22 (v1):
     - Sección §17 dedicada a almacenamiento (dev + prod).
     - Decisión #70.
 
-Rutas: +1 = 69 rutas reales (11+9+37+0+12) + Route::fallback() = 70 mostradas
-por artisan.
-
 ----------------------------------------------------------------------
 1. QUÉ ES EL SISTEMA
 ----------------------------------------------------------------------
@@ -59,17 +97,17 @@ pesos colombianos (COP, siempre enteros, nunca decimales). Permite:
   - Registrar gastos fijos mensuales (arriendo, servicios...) con vencimientos y alertas
     automáticas 3 días antes.
   - Simular créditos (sistema francés) y guardar las simulaciones.
-  - Ver un informe mensual contra la regla 50/30/20.
+  - Ver un informe mensual contra la regla 50/30/20, exportarlo a CSV y a Word (.doc),
+    tanto del mes actual como de informes históricos guardados.
   - Metas de ahorro INDIVIDUALES o COMPARTIDAS entre DOS usuarios "familiar" (máx. 2),
     con privacidad de aportes.
   - Cambiar el tipo de cuenta (estándar <-> familiar) desde Ajustes. Exclusivo para
     estandar y familiar; el admin no tiene acceso.
   - Cambiar el correo electrónico con verificación por enlace (token de un solo uso,
     1 hora, correo al NUEVO destino).
-  - Administración (usuarios, roles, categorías del sistema, estadísticas agregadas
-    y dashboard del administrador en /admin/panel).
+  - Administración (usuarios, roles, categorías del sistema, estadísticas agregadas,
+    dashboard del administrador en /admin/panel y auditoría en /admin/auditoria).
   - El admin también puede elegir el ícono de cada categoría del sistema.
-  - Auditoría de acciones del admin en /admin/auditoria (solo lectura).
   - Modo claro / oscuro con persistencia en localStorage y favicon dinámico.
   - Tinte por rol: verde (estándar), morado (familiar), azul (administrador).
   - Iconografía por categoría (SVG propio, color por bloque 50/30/20, personalizable).
@@ -77,7 +115,7 @@ pesos colombianos (COP, siempre enteros, nunca decimales). Permite:
     correos con identidad de marca.
   - Seguridad reforzada en J9:
     · CSP (Content-Security-Policy) + X-Frame-Options + nosniff + HSTS.
-    · Notificaciones de seguridad por correo (password/email/account/login).
+    · Notificaciones de seguridad por correo (password/email/account/login/IP nueva).
     · Re-autenticación (current_password) para acciones destructivas.
     · Registro de auditoría de cada cambio hecho por el admin.
     · Notificación al usuario cuando sus intentos de login se bloquean.
@@ -91,6 +129,9 @@ pesos colombianos (COP, siempre enteros, nunca decimales). Permite:
   - Almacenamiento de imágenes: dev usa symlink local (storage:link),
     producción puede migrar a S3/R2 sin cambiar el código (el disk 'public' es
     la abstracción).
+  - [NUEVO v3] robots.txt y sitemap.xml dinámicos para SEO (rutas públicas).
+  - [NUEVO v3] Chart.js empaquetado con Vite para las gráficas de informes.
+
 El diseño visual YA ESTÁ HECHO (vistas Blade + CSS + JS). EL DISEÑO NO SE CAMBIA.
 
 Equipo: Juan (base, seguridad, reglas), Nikol (dinero del día a día), Valeria (cálculo y
@@ -193,6 +234,9 @@ HECHO (V3 - Informes 50/30/20, 2026-10-17, Valeria):
   [x] InformeController: actual, guardar, historial, ver.
   [x] tests/Feature/InformesTest.php: 4 pruebas.
   [x] Regla: informe guardado no se recalcula.
+  [NUEVO v3] Exportación a CSV y Word (actual e histórico).
+  [NUEVO v3] Gastos hormiga detectados inline en calcularMes.
+  [NUEVO v3] Chart.js para las gráficas (dona y barras).
 
 HECHO (V4 - Ajustes completo, 2026-10-17, Valeria):
   [x] AjustesController: perfil, actualizarPerfil, tipoCuenta, cambiarTipo,
@@ -215,12 +259,14 @@ HECHO (N1 - Gastos):
   [x] Scope delPeriodo en Gasto.
   [x] Vistas app/gastos/index y create.
   [x] Pruebas con fábricas + aislamiento.
+  [CORREGIDO v3] GastoController@index y @create contienen un hack
+      auth()->loginUsingId(1). Ver §18.1.
 
 HECHO (N2 - Categorías):
   [x] CategoriaController: index, store, update, destroy.
   [x] StoreCategoriaRequest.
   [x] Vista app/categorias/index con botones del sistema, candado SVG y modal de traslado.
-  [x] Nombre único por usuario.
+  [x] Nombre único por usuario (case-insensitive con closure).
   [x] Categoria::activas() aplicado.
   [x] Pruebas de aislamiento.
 
@@ -296,7 +342,7 @@ HECHO (Dashboard del administrador + fix del header, 2026-10-21):
   [x] app/Http/Controllers/Admin/PanelController.php (nuevo): KPIs con COUNT.
   [x] resources/views/admin/panel.blade.php (nuevo).
   [x] tests/Feature/Admin/PanelTest.php (nuevo): 5 pruebas.
-  [x] header.blade.php: "Ir a mi panel" según rol.
+  [x] header.blade.php: "Ir a mi panel" según rol (User::rutaPanel()).
   [x] sidebar-admin.blade.php: ítem "Panel".
   [x] /admin/estadisticas se mantiene como agregados detallados.
   [x] Decisión #60.
@@ -304,14 +350,14 @@ HECHO (Dashboard del administrador + fix del header, 2026-10-21):
 HECHO (J9 - Seguridad, 2026-10-22):
   [x] Migración 2026_10_22_000000_crear_auditorias_table.
   [x] Migración 2026_10_22_000001_agregar_login_ip_a_users_table.
-  [x] app/Models/Auditoria.php.
-  [x] app/Services/Auditoria.php.
+  [x] app/Models/Auditoria.php (solo INSERT, inmutable).
+  [x] app/Services/Auditoria.php (registra con instancia inyectada).
   [x] app/Http/Controllers/Admin/AuditoriaController.php.
   [x] resources/views/admin/auditoria.blade.php.
   [x] routes/modulos/admin.php: GET /admin/auditoria.
   [x] sidebar-admin.blade.php: ítem "Auditoría".
   [x] Auditoría en UsuarioController y CategoriaSistemaController.
-  [x] app/Notifications/AlertaSeguridad.php (ShouldQueue).
+  [x] app/Notifications/AlertaSeguridad.php (implements ShouldQueue).
   [x] resources/views/emails/alerta-seguridad.blade.php.
   [x] User: esIpNueva(), registrarLogin(), rutaPanel() + helpers 2FA (no usados).
   [x] LoginController: detecta IP nueva + notifica.
@@ -328,6 +374,8 @@ HECHO (J9 - Seguridad, 2026-10-22):
       Admin/AuditoriaTest, AjustesTest actualizados.
   [x] docs/juan/J9_Checklist_Previo.txt + docs/juan/deploy.sh.
   [x] Tests finales: ~214 passing.
+  [CORREGIDO v3] User::registrarLogin recibe $userAgent pero NO lo persiste.
+      Ver §18.5.
 
 HECHO (Onboarding tour + admin elimina categorías + foto de perfil,
        2026-10-22 v2):
@@ -379,15 +427,30 @@ HECHO (Onboarding tour + admin elimina categorías + foto de perfil,
   [x] Sección §17 dedicada a almacenamiento dev/prod.
   [x] Decisión #70.
 
-  Automatización de Informes y Gastos Hormiga:
-  [x] Comando `informes:guardar-mensuales` programado para el día 1 de cada mes a las 00:05.
-      Calcula y guarda el informe del mes anterior para todos los usuarios activos.
-      Idempotente y acepta --fecha para simular.
-  [x] Servicio `App\Services\ServicioGastosHormiga.php` (nuevo). Centraliza la detección
-      de gastos recurrentes (repetición + impacto en el total).
-  [x] Vista `resources/views/app/informes/exportar-word.blade.php` (nuevo). Plantilla Word.
-  [x] Integración de Chart.js para las gráficas (dona y barras) de los informes.
-  [x] Uso de Vite para empaquetar Chart.js (npm install + npm run build).
+  Automatización de Informes y Gastos Hormiga  [NUEVO v3, consolidado]:
+  [x] Comando `informes:guardar-mensuales` programado para el día 1 de cada
+      mes a las 00:05. Calcula y guarda el informe del mes anterior para
+      todos los usuarios activos (estandar/familiar con ingreso > 0).
+      Idempotente. Acepta --fecha=YYYY-MM-DD para simular.
+      Implementación: GuardarInformesMensuales (reutiliza
+      InformeController::calcularMes como orquestador; deuda técnica).
+  [x] Comando `informes:notificar-disponibles` programado el día 1 a las
+      07:05. Notifica a usuarios activos con clave_unica
+      "informe_disponible:{YYYY-MM}". Idempotente.
+  [x] Servicio `App\Services\ServicioGastosHormiga.php` (existe, pero NO se
+      usa desde InformeController; ver §18.4). Regla del servicio:
+      monto <= 20000 y frecuencia >= 3.
+  [x] Vista `resources/views/app/informes/exportar-word.blade.php` (nuevo).
+      Content-Type application/msword. Descarga con .doc.
+  [x] Exportación CSV (streamDownload + BOM UTF-8) para Excel.
+  [x] Integración de Chart.js para las gráficas (dona y barras) de los
+      informes.
+  [x] Uso de Vite para empaquetar Chart.js (npm install + npm install
+      chart.js + npm run build).
+  [x] SitemapController + robots.txt + sitemap.xml.
+  [CORREGIDO v3] La regla de "gastos hormiga" que corre es la de
+      InformeController (frecuencia >= 5 && porcentaje >= 5). El
+      ServicioGastosHormiga NO está cableado. Ver §18.4.
 
 EN CURSO:
   N5 (Nikol): landing final y páginas legales.
@@ -407,13 +470,13 @@ PENDIENTE J9.2:
   [ ] Auditoría de logs (grep "Log::" app/) no se pudo correr.
   [ ] Script backup-cuentas-claras.sh no está instalado en servidor.
 
-
 .env DE DESARROLLO: copiar .env.example a .env, php artisan key:generate,
 APP_ENV=local, APP_DEBUG=true, APP_LOCALE=es, DB_CONNECTION=sqlite,
 SESSION_DRIVER=database, SESSION_LIFETIME=480, CACHE_STORE=database,
 QUEUE_CONNECTION=database, MAIL_MAILER=log, AUTH_PASSWORD_RESET_EXPIRE=30.
 Primera vez: php artisan migrate:fresh --seed.
 Además: php artisan storage:link (necesario para foto de perfil y adjuntos).
+Además  [NUEVO v3]: npm install && npm install chart.js && npm run build.
 
 ENTORNO LOCAL (2026-10-22):
   · PHP 8.4.0 vía Laravel Herd en /c/Users/juane/.config/herd-lite/bin/php.
@@ -426,15 +489,17 @@ ENTORNO LOCAL (2026-10-22):
 3. STACK Y CONFIGURACIÓN
 ----------------------------------------------------------------------
   Backend ........ PHP 8.4 + Laravel 11/12 (bootstrap/app.php).
-  Vistas ......... Blade. Sin Vite compilado para CSS, PERO se usa Vite para empaquetar Chart.js
+  Vistas ......... Blade. Sin Vite compilado para CSS, PERO se usa Vite para
+                   empaquetar Chart.js (resources/js/app.js).  [NUEVO v3]
   Estilos ........ public/css/style.css · theme.css · transiciones.css ·
                    menu-usuario.css + un CSS por pantalla
                    (+ onboarding.css para el tour).
   Scripts ........ shell.js · theme.js · transiciones.js ·
                    simulador-de-creditos.js · crear-usuario.js
-  Build Frontend . npm install && npm install chart.js && npm run build (obligatorio antes de
-                   correr el proyecto para compilar los assets de Chart.js).
                    (+ onboarding.js para el tour).
+  Build Frontend . npm install && npm install chart.js && npm run build
+                   (obligatorio antes de correr el proyecto para compilar
+                   los assets de Chart.js).  [NUEVO v3]
   Fuentes/íconos . Plus Jakarta Sans (display=swap) + Material Symbols
                    (display=block) + SVGs inline (logo, iconos de categoría,
                    botones con icono).
@@ -568,14 +633,15 @@ RE-AUTENTICACIÓN:
                                SimulacionCreditoController, AjustesController,
                                GastoFijoController, InformeController,
                                NotificacionController, DashboardController,
-                               CategoriaController,
+                               CategoriaController, GastoController,
+                               SitemapController,                       [NUEVO v3]
                                Admin/{PanelController, UsuarioController,
                                CategoriaSistemaController, EstadisticaController,
                                AuditoriaController}
     Http/Middleware/ ......... (R) CuentaActiva, RolRequerido,
                                ExpirarSesionPorInactividad, SecurityHeaders.
     Http/Requests/ ........... (R) Auth/*, Metas/*, Admin/*, Categorias/*,
-                               UpdatePerfilRequest,
+                               UpdatePerfilRequest, StoreSimulacionRequest,
                                Admin/EliminarUsuarioRequest,
                                Admin/EliminarCategoriaSistemaRequest.
     Notifications/ ........... (R) RestablecerContrasena, ConfirmarCambioCorreo,
@@ -584,16 +650,24 @@ RE-AUTENTICACIÓN:
                                SimulacionCredito, Informe, DetalleInforme, Meta,
                                ParticipacionMeta, AporteMeta, Notificacion,
                                Auditoria.
-    Policies/ ................ (R) PoliticaDeDueno (base), GastoPolicy, GastoFijoPolicy,
+    Policies/ ................ (R) PoliticaDeDueno (base, abstracta),
+                               GastoPolicy, GastoFijoPolicy,
                                SimulacionCreditoPolicy, NotificacionPolicy,
                                InformePolicy, CategoriaPolicy, MetaPolicy,
-                               ParticipacionMetaPolicy, AporteMetaPolicy
+                               ParticipacionMetaPolicy, AporteMetaPolicy.
     Models/Concerns/ ......... (R) PerteneceAUsuario (scope delUsuario)
     Providers/AppServiceProvider.php ... (R) View Composer $notificacionesPendientes
+                               inyectado en layouts.app, layouts.admin y
+                               components.topbar.
     Services/ ................ (R) CalculadoraCredito, ServicioMetas, ServicioCuentas,
                                ServicioGastosFijos, ServicioNotificaciones,
                                GeneradorInforme, Auditoria, ServicioGastosHormiga.
+                               [CORREGIDO v3] ServicioGastosHormiga NO está
+                               cableado (ver §18.4).
     Console/ ................. (R) Commands/GenerarAlertasGastosFijos.php
+                               Commands/GuardarInformesMensuales.php  [NUEVO v3]
+                               Commands/NotificarInformesMensualesDisponibles.php
+                               [NUEVO v3]
   bootstrap/app.php .......... (R) alias 'cuenta.activa', 'rol', 'sesion.inactividad'.
                                SecurityHeaders::class appended a todos los requests.
                                redirectUsersTo → admin.panel si admin, panel si no.
@@ -606,19 +680,28 @@ RE-AUTENTICACIÓN:
                                (PENDIENTE J9.2: migración 2026_10_22_000002
                                 con two_factor_secret y two_factor_confirmed_at).
   routes/
-    web.php .................. (R) ÍNDICE. Grupos A-C y E.
+    web.php .................. (R) ÍNDICE + /robots.txt (closure) + /sitemap.xml
+                               (SitemapController) + Grupos A-C y E.
                                Middleware del bloque privado:
                                ['sesion.inactividad', 'auth', 'cuenta.activa'].
                                Route::fallback() al final del bloque privado.
-    modulos/ ................. (R) un archivo por módulo.
+                               logout (POST /cerrar-sesion) está SOLO con 'auth'.
+    modulos/ ................. (R) un archivo por módulo:
+                               publico, auth, ajustes, panel, gastos,
+                               gastos-fijos, notificaciones, creditos,
+                               informes, metas, admin.
     console.php .............. (R) Schedule::command('alertas:gastos-fijos')
                                ->dailyAt('07:00')
+                               Schedule::command('informes:notificar-disponibles')
+                               ->monthlyOn(1, '07:05')
+                               Schedule::command('informes:guardar-mensuales')
+                               ->monthlyOn(1, '00:05')  [NUEVO v3]
   resources/views/
     errors/ .................. (R) 403.blade.php, 404.blade.php (personalizadas).
     layouts/ ................. (R) base, publico, app, admin
     components/ .............. (R) header, footer, sidebar, sidebar-admin, topbar,
                                toast, logo, categoria-icono, user-avatar,
-                               onboarding-tour.
+                               onboarding-tour, auth-background.
     emails/ .................. (R) confirmar-cambio-correo.blade.php,
                                restablecer-contrasena.blade.php,
                                alerta-seguridad.blade.php.
@@ -632,6 +715,7 @@ RE-AUTENTICACIÓN:
                                y ajustes/seguridad-2fa-setup.blade.php).
     admin/ ................... (R) panel, usuarios, categorias, estadisticas,
                                auditoria.
+    sitemap.blade.php ........ (R) usada por SitemapController.       [NUEVO v3]
   public/css ................. (R) style.css, theme.css, transiciones.css,
                                menu-usuario.css, onboarding.css + un CSS por
                                pantalla.
@@ -646,11 +730,13 @@ RE-AUTENTICACIÓN:
   docs/juan/ ................. (R) J9_Checklist_Previo.txt, deploy.sh.
   tests/ ..................... (R) tests/Feature/{BaseDeDatosTest, AuthTest,
                                PermisosTest, AislamientoTest, MetasTest, AjustesTest,
-                               CalculadoraCreditoTest, GastosFijosTest, InformesTest,
-                               AlertasTest, EliminarCuentaTest, GastoFijoControllerTest,
+                               GastosFijosTest, InformesTest, AlertasTest,
+                               EliminarCuentaTest, GastoFijoControllerTest,
                                DashboardTest, NotificacionesTest}
                                tests/Feature/Admin/{PanelTest, UsuariosTest,
                                CategoriasSistemaTest, EstadisticasTest, AuditoriaTest}
+                               tests/Unit/{CalculadoraCreditoTest,
+                               ServicioGastosFijosTest}
   README.md .................. (R) raíz.
   DECISIONES.md .............. (R) raíz.
 
@@ -668,9 +754,9 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   Vista (resources/views/...)             CSS (public/css/...)                 Dueño
   errors/403                              — (theme.css bloque 9)               Juan (J7)
   errors/404                              — (theme.css bloque 9)               Juan (2026-10-19)
-  emails/confirmar-cambio-correo          —                                    Juan (V4)
-  emails/restablecer-contrasena           —                                    Juan (J3)
-  emails/alerta-seguridad                 —                                    Juan (2026-10-22)
+  emails/confirmar-cambio-correo          — (inline)                           Juan (V4)
+  emails/restablecer-contrasena           — (inline)                           Juan (J3)
+  emails/alerta-seguridad                 — (inline)                           Juan (J9)
   publico/landing                         landing-page                         Nikol N5
   publico/politica-de-privacidad          politica-de-privacidad               Nikol N5
   publico/terminos-y-condiciones          terminos-y-condiciones               Nikol N5
@@ -678,9 +764,10 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   publico/crear-usuario (+crear-usuario.js) crear-usuario                      Juan J3
   publico/recuperar-contrasena            recuperar-contrasena                 Juan J3
   publico/restablecer-contrasena          restablecer-contrasena               Juan J3
+  sitemap                                 — (inline XML)                       Juan (2026-11-12)  [NUEVO v3]
   app/dashboard (+onboarding-tour)        dashboard-principal                  Juan J8
                                           + onboarding.css                     (2026-10-22 v2)
-  app/gastos/index                        gastos                               Nikol N1
+  app/gastos/index + create + edit        gastos                               Nikol N1
   app/categorias/index                    categorias                           Nikol N2
   app/gastos-fijos/index                  gastos-fijos                         Nikol N3
   app/notificaciones/index (+_icono)      notificaciones                       Nikol N4
@@ -688,6 +775,7 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   app/creditos/historial                  historial-simulaciones               Valeria V2
   app/informes/actual                     informes-50-30-20                    Valeria V3
   app/informes/historial                  informes-historial                   Valeria V3
+  app/informes/exportar-word              — (inline application/msword)        Valeria V3 (v3)
   app/ajustes/perfil (+onboarding-tour)   ajustes                              Valeria V4
                                           + onboarding.css                     (2026-10-22 v2)
   app/ajustes/{tipo-cuenta,eliminar-cuenta,_tabs}  ajustes                     Valeria V4
@@ -703,10 +791,13 @@ ARCHIVOS COMPARTIDOS (solo Juan; los demás piden cambios con tarjeta):
   admin/auditoria                         admin-usuarios (reutilizable)        Juan (2026-10-22)
 
 Componentes compartidos:
-  header.blade.php ................. header público + <x-logo />.
+  header.blade.php ................. header público + <x-logo /> + botón tema.
+  footer.blade.php ................. footer público + <x-logo /> + columnas
+                                     (marca, exploración, legal, aviso).
   topbar.blade.php ................. barra superior con .topbar-acciones,
                                      avatar <x-user-avatar>, botón hamburguesa
-                                     (data-tour="menu-movil").
+                                     (data-tour="menu-movil"), CTA "Nuevo Gasto"
+                                     (data-tour="nuevo-gasto", no admin).
   sidebar.blade.php ................ menú lateral privado + <x-logo /> +
                                      data-tour="menu-lateral".
   sidebar-admin.blade.php .......... menú lateral de administración + <x-logo />
@@ -720,18 +811,30 @@ Componentes compartidos:
                                      iniciales. [NUEVO 2026-10-22 v2]
   onboarding-tour.blade.php ........ Componente del tour. Carga CSS/JS y
                                      opcionalmente autoarranca. [NUEVO]
+  auth-background.blade.php ........ Fondo decorativo de páginas de auth
+                                     (patrón + glows). [NUEVO v3]
 
 ----------------------------------------------------------------------
 7. RUTAS: URL Y NOMBRES DEFINITIVOS, NO SE CAMBIAN
 ----------------------------------------------------------------------
 Fuente de verdad: docs/backend/00-rutas.php.
-Conteo real (2026-10-22 v2): 11 (A) + 9 (B) + 37 (C) + 0 (D) + 12 (E) = 69 rutas
-+ Route::fallback() (sin nombre) = 70 mostradas por
-`php artisan route:list --except-vendor`.
+Conteo real (2026-11-12 v3): 75 rutas con nombre + Route::fallback() sin
+nombre = 76 mostradas por `php artisan route:list --except-vendor`.
+(El v2 decía 69+1=70. Actualización: se agregaron robots.txt, sitemap.xml
+y 4 exportaciones de informes.)
+
 Middleware del bloque privado: ['sesion.inactividad', 'auth', 'cuenta.activa'].
 Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
+NOTA: logout (POST /cerrar-sesion) está SOLO con 'auth' (no lleva
+sesion.inactividad ni cuenta.activa). Es intencional: si la sesión
+expiró, el usuario igual debe poder cerrarla.
 
-  GRUPO A  PUBLICAS .............. sin sesion (login/registro/recuperar con 'guest')
+PREVIO / SEO (fuera de grupos, en routes/web.php)  [NUEVO v3]
+----------------------------------------------------------------------------------------------------------------------
+GET    /robots.txt                                      robots              (closure, sin middleware)
+GET    /sitemap.xml                                     sitemap             SitemapController@index
+
+  GRUPO A  PÚBLICAS .............. sin sesion (login/registro/recuperar con 'guest')
   ----------------------------------------------------------------------------------------------------------------------
   GET    /                                                inicio
   GET    /politica-de-privacidad                          politica
@@ -745,9 +848,12 @@ Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
   GET    /restablecer-contrasena/{token}                  password.reset
   POST   /restablecer-contrasena                          password.update                (throttle:5,1)
 
-  GRUPO B  CON SESION ............ sesion.inactividad + auth + cuenta.activa
+  GRUPO B  LOGOUT (solo auth)
   ----------------------------------------------------------------------------------------------------------------------
   POST   /cerrar-sesion                                   logout
+
+  GRUPO B  CON SESION ............ sesion.inactividad + auth + cuenta.activa
+  ----------------------------------------------------------------------------------------------------------------------
   GET    /ajustes/perfil                                  ajustes.perfil                 (HECHO - V4)
   PUT    /ajustes/perfil                                  ajustes.perfil.update          (HECHO - V4)
   GET    /ajustes/confirmar-correo/{token}                ajustes.confirmar-correo       (HECHO - V4)
@@ -788,19 +894,21 @@ Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
   GET    /informes                                        informes.actual                (HECHO)
   POST   /informes/guardar                                informes.guardar               (HECHO)
   GET    /informes/historial                              informes.historial             (HECHO)
-  GET    /informes/historial/{id}                         informes.ver                   (HECHO)
-  GET    /informes/exportar/word                          informes.exportar.word         (HECHO)
-  GET    /informes/historico/{id}/word                    informes.historico.word        (HECHO)
+  GET    /informes/historial/{id}                         informes.ver                   (HECHO) (whereNumber)
+  GET    /informes/exportar/csv                           informes.exportar.csv          [NUEVO v3]
+  GET    /informes/exportar/word                          informes.exportar.word         (HECHO - 2026-10-22)
+  GET    /informes/historial/{id}/exportar/csv            informes.historico.csv         [NUEVO v3]
+  GET    /informes/historial/{id}/exportar/word           informes.historico.word        (HECHO - 2026-10-22)
   GET    /metas                                           metas.index                    (HECHO)
   POST   /metas                                           metas.store                    (HECHO)
   GET    /metas/invitaciones                              metas.invitaciones             (HECHO)
-  POST   /metas/invitaciones/{participacion}/aceptar      metas.aceptar                  (HECHO)
-  POST   /metas/invitaciones/{participacion}/rechazar     metas.rechazar                 (HECHO)
-  GET    /metas/{meta}                                    metas.show                     (HECHO)
-  POST   /metas/{meta}/invitar                            metas.invitar                  (HECHO)
-  POST   /metas/{meta}/aportes                            metas.aportes                  (HECHO)
-  POST   /metas/{meta}/finalizar                          metas.finalizar                (HECHO)
-  POST   /metas/{meta}/abandonar                          metas.abandonar                (HECHO)
+  POST   /metas/invitaciones/{participacion}/aceptar      metas.aceptar                  (HECHO) (whereNumber)
+  POST   /metas/invitaciones/{participacion}/rechazar     metas.rechazar                 (HECHO) (whereNumber)
+  GET    /metas/{meta}                                    metas.show                     (HECHO) (whereNumber)
+  POST   /metas/{meta}/invitar                            metas.invitar                  (HECHO) (whereNumber)
+  POST   /metas/{meta}/aportes                            metas.aportes                  (HECHO) (whereNumber)
+  POST   /metas/{meta}/finalizar                          metas.finalizar                (HECHO) (whereNumber)
+  POST   /metas/{meta}/abandonar                          metas.abandonar                (HECHO) (whereNumber)
 
   GRUPO E  SOLO ADMINISTRADOR .... auth + cuenta.activa + rol:administrador ; prefijo /admin
   ----------------------------------------------------------------------------------------------------------------------
@@ -814,13 +922,23 @@ Los subgrupos (B financiero, C, E) añaden 'rol:...' encima.
   PUT    /admin/categorias/{categoria}                    admin.categorias.update        (HECHO - J7)
   PATCH  /admin/categorias/{categoria}/desactivar         admin.categorias.desactivar    (HECHO - J7) (reauth: password)
   DELETE /admin/categorias/{categoria}                    admin.categorias.destroy       (HECHO - 2026-10-22 v2)
-                                                                                          (throttle:30,1) (reauth: password) [NUEVO]
+                                                                                          (throttle:30,1) (reauth: password)
   GET    /admin/estadisticas                              admin.estadisticas             (HECHO - J7)
   GET    /admin/auditoria                                 admin.auditoria                (HECHO - 2026-10-22)
 
-  FALLBACK ....................... sin middleware (web)
+  FALLBACK (dentro del grupo privado)  ............ sin middleware extra
   ----------------------------------------------------------------------------------------------------------------------
-  *      /{cualquier url}                                 (sin nombre)           -> errors.404
+  *      /{cualquier url}                                 (sin nombre)           -> errors.404 (404)
+
+Rutas ELIMINADAS / NO PRESENTES (respecto a v1/v2):
+  · GET /cerrar-sesion: NO existe. Solo POST /cerrar-sesion.
+  · Grupo D de metas: eliminado en 2026-10-08.
+
+Rutas AGREGADAS en v3 (existen en el código, no estaban en v2):
+  · GET /robots.txt
+  · GET /sitemap.xml
+  · GET /informes/exportar/csv
+  · GET /informes/historial/{id}/exportar/csv
 
 ----------------------------------------------------------------------
 8. CÓMO PASAR UNA RUTA DE MAQUETA A REAL
@@ -882,6 +1000,7 @@ porcentajes del informe. Nombres en español salvo users.
   detalles_informe ...... id, informe_id, categoria_id, categoria_nombre, bloque,
                           monto_gastado, porcentaje_real, porcentaje_recomendado,
                           excede
+                          · sin created_at/updated_at ($timestamps = false).
   metas ................. id, creador_id, nombre, monto_objetivo, fecha_limite,
                           estado, compartida
   participaciones_meta .. id, meta_id, user_id, estado_invitacion, fecha_union
@@ -900,31 +1019,60 @@ porcentajes del informe. Nombres en español salvo users.
                             elimina el admin que hizo la acción.
                           · modelo_id sin FK: histórico sobrevive al borrado.
 
-Tipos de notificación: por_vencer, vencido, invitacion_meta,
-invitacion_meta_requiere_familiar, respuesta_meta, meta_finalizada, meta_abandonada.
+Tipos de notificación (ServicioNotificaciones::TIPO_*)  [NUEVO v3]:
+  por_vencer, vencido, invitacion_meta,
+  invitacion_meta_requiere_familiar, respuesta_meta,
+  meta_finalizada, meta_abandonada, informe_disponible.
 
-Eventos de AlertaSeguridad: password.changed, email.changed,
-account.suspended, login.new_ip, login.blocked.
+Estados de notificación (ServicioNotificaciones::ESTADO_*):
+  pendiente, leida, cancelada.
 
-Ayudas útiles: Categoria::BLOQUES, Categoria::ICONOS, Categoria::activas(),
-  Categoria::esDelSistema(), Categoria::iconoResuelto(),
-  Gasto::delUsuario($id), Gasto::delPeriodo($anio, $mes),
-  Meta::totalConjunto(),
-  Meta::aportesDelUsuario($id, $desde, $hasta),
-  Categoria::gastosFijos(),
-  Auditoria::registrar($accion, $modelo, $modeloId, $antes, $despues),
-  User::esIpNueva($ip), User::registrarLogin($ip, $ua), User::rutaPanel(),
-  User::avatar_url (accessor).
+Eventos de AlertaSeguridad:
+  password.changed, email.changed, account.suspended,
+  login.new_ip, login.blocked.
+
+Ayudas útiles:
+  Categoria::BLOQUES
+  Categoria::ICONOS
+  Categoria::activas()  ·  Categoria::esDelSistema()  ·  Categoria::iconoResuelto()
+  Gasto::delUsuario($id)  ·  Gasto::delPeriodo($anio, $mes)
+  Meta::delParticipante($id)  ·  Meta::totalConjunto()  ·  Meta::porcentaje()
+  Meta::objetivoAlcanzado()
+  Meta::aportesDelUsuario($id, $desde = null, $hasta = null)
+  Meta::esCompartida()  (default true si el atributo no está cargado)
+  Categoria::gastosFijos()
+  Auditoria::registrar($accion, $modelo, $modeloId, $antes, $despues)  (estático)
+  User::esIpNueva($ip)
+  User::registrarLogin($ip, $ua)  ·  User::rutaPanel()
+  User::avatar_url  (accessor)
+
 Alcance "del usuario actual": Modelo::delUsuario(auth()->id()) en listados y
   totales; para un registro puntual, $this->authorize('view|update|delete',
   $registro).
-El modelo Gasto tiene casts: fecha => date, monto => integer.
-El modelo User tiene casts: pending_email_expires_at => datetime,
-  last_login_at => datetime.
-El modelo Auditoria tiene casts: antes => array, despues => array.
-pending_email, email_token, pending_email_expires_at, last_login_ip y
-two_factor_secret están en $hidden y NO en $fillable.
-foto_perfil SÍ está en $fillable (se asigna desde el controller validado).
+
+Casts:
+  Gasto: fecha => date, monto => integer.
+  User: password => hashed, activo => boolean, ingreso_mensual => integer,
+        consentimiento_datos_at => datetime, pending_email_expires_at => datetime,
+        last_login_at => datetime.
+  Auditoria: antes => array, despues => array.
+  Meta: fecha_limite => date, compartida => boolean.
+  GastoFijo: activo => boolean, monto => integer.
+  PagoGastoFijo: fecha_vencimiento => date, fecha_pago => date.
+  AporteMeta: fecha => date, monto => integer.
+  Categoria: peso_recomendado => integer, activa => boolean.
+  DetalleInforme: excede => boolean. $timestamps = false.
+
+$hidden / $fillable:
+  User::$hidden: password, remember_token, email_token, pending_email,
+    pending_email_expires_at, last_login_ip.
+  User::$fillable: nombre, cedula, email, password, ingreso_mensual,
+    consentimiento_datos_at, foto_perfil.
+  Gasto::$fillable: user_id, categoria_id, monto, fecha, descripcion.
+  Resto de modelos: $guarded = [] + $request->validated() en controladores.
+  [CORREGIDO v3] Convención real: solo Gasto y User tienen $fillable; el
+  resto usa $guarded = [] (seguro porque todos los controllers usan
+  validated()).
 
 Regla #23 (ACTUALIZADA 2026-10-22 v2):
   - Categorías del sistema se desactivan.
@@ -945,7 +1093,7 @@ Caso de referencia del simulador: $10.000.000, 1,5 % mensual, 24 meses
   => cuota $499.241, total $11.981.784, intereses $1.981.784.
 
 ----------------------------------------------------------------------
-10. SERVICIOS Y CONTRATOS ENTRE MÓDULOS (C1-C19)
+10. SERVICIOS Y CONTRATOS ENTRE MÓDULOS (C1-C22)
 ----------------------------------------------------------------------
   C1  Consulta de gastos por periodo ... Nikol (N1, HECHO).
       Gasto::delPeriodo($anio, $mes). DashboardController lo usa.
@@ -957,8 +1105,9 @@ Caso de referencia del simulador: $10.000.000, 1,5 % mensual, 24 meses
       Métodos: crear, contarPendientes, cancelarPorPago, cancelarPorGastoFijo,
       marcarLeida, marcarTodasLeidas. Constantes TIPO_* y ESTADO_*.
   C5  Pagos del periodo de gastos fijos  Nikol (N3, HECHO).
-      ServicioGastosFijos::generarPagosDelPeriodo, marcarVencidos,
-      pendientesDelPeriodo, proximosAVencer, vencidos, estaPagado, marcarPagado.
+      ServicioGastosFijos::fechaVencimiento, generarPagosDelPeriodo,
+      marcarVencidos, pendientesDelPeriodo, proximosAVencer, vencidos,
+      estaPagado, marcarPagado.
   C6  "Tiene metas activas" ............ Juan (J5, HECHO).
       ServicioMetas::tieneMetasActivas($usuario),
       tieneMetasCompartidasActivas($usuario),
@@ -989,11 +1138,73 @@ Caso de referencia del simulador: $10.000.000, 1,5 % mensual, 24 meses
       NUNCA dentro de un loop: cada cambio genera 1 registro.
       Solo INSERT, la tabla es inmutable.
   C19 Notificaciones de seguridad ....... Juan (2026-10-22, HECHO).
-      App\Notifications\AlertaSeguridad (ShouldQueue).
+      App\Notifications\AlertaSeguridad (implements ShouldQueue).
       Eventos: password.changed, email.changed, account.suspended,
       login.new_ip, login.blocked.
       email.changed va al correo VIEJO.
       login.blocked solo si el correo existe en BD, máx 1 por hora.
+  C20 Onboarding tour ................... Juan (2026-10-22 v2, HECHO).
+      Motor public/js/onboarding.js. Componente <x-onboarding-tour />.
+      API: CCOnboarding.{start, autoStart, restart, reset, isDone, isMobile}.
+  C21 Foto de perfil .................... Juan (2026-10-22 v2, HECHO).
+      <x-user-avatar>. Accessor User::avatar_url. Storage::disk('public').
+  C22 Informes 50/30/20 ................. Valeria (V3, HECHO).  [NUEVO v3]
+      GeneradorInforme::generar (puro) + InformeController::calcularMes
+      (orquesta gastos + pagos fijos pagados + gastos hormiga inline).
+
+CONTRATO C4 (detalle real)
+  crear($usuario, $tipo, $mensaje, $opciones = []):
+    - Si $opciones['clave_unica'] es null → Notificacion::create directo.
+    - Si existe con la misma (user_id, clave_unica) y estado 'cancelada' →
+      reactiva con el mensaje nuevo.
+    - Si existe con 'pendiente' o 'leida' → NO hace nada (idempotencia).
+    - Devuelve la Notificacion.
+  contarPendientes: count de pendientes.
+  cancelarPorPago: UPDATE estado='cancelada' por pago.
+  cancelarPorGastoFijo: idem para todos los pagos del gasto fijo.
+  marcarLeida: solo si estaba pendiente.
+  marcarTodasLeidas: UPDATE masivo. Devuelve count.
+
+CONTRATO C5 (detalle real)  [NUEVO v3]
+  fechaVencimiento: si el día configurado no existe en el mes, usa el último
+    día del mes.
+  generarPagosDelPeriodo: DB::transaction + firstOrCreate por
+    (gasto_fijo_id, periodo). Idempotente por el unique de BD.
+  marcarVencidos: UPDATE pendiente→vencido si fecha_vencimiento < hoy.
+  proximosAVencer($usuario, $fecha, $dias = 3):
+    whereDate(fecha_vencimiento, '>=', hoy)
+    whereDate(fecha_vencimiento, '<=', límite)  ← incluye el día límite.
+  marcarPagado:
+    DB::transaction + lockForUpdate() sobre el pago si existe.
+    Si no existe, crea uno con estado 'pagado' y fecha_pago.
+    Cancela notificaciones del pago (cancelarPorPago).
+    Revalida user_id (AuthorizationException) como defensa en profundidad.
+
+CONTRATO C6 (detalle real)  [NUEVO v3]
+  MAX_PARTICIPANTES = 2.
+  crear($creador, $datos): DB::transaction. Crea Meta + ParticipacionMeta
+    (creador aceptada). Si compartida → invitar() dentro de la misma
+    transacción (falla = rollback completo).
+  invitar($meta, $correo): DB::transaction + lockForUpdate() sobre la
+    fila de la meta.
+    Orden de validación:
+      1. existe correo (activo, no admin) → MSG_NO_EXISTE
+      2. no soy yo → MSG_YO_MISMO
+      3. es familiar/estandar → MSG_NO_EXISTE (admin se trata como inexistente)
+      4. ya participa (pendiente|aceptada) → MSG_YA_PARTICIPA
+      5. cupo (pendiente + aceptada < 2) → MSG_LLENA
+    Reusa fila si ya rechazó/abandonó antes (unique meta_id+user_id).
+    Notifica según rol (estandar recibe 'invitacion_meta_requiere_familiar').
+  aceptar($participacion): solo si meta activa + usuario es familiar.
+  rechazar: 'rechazada'.
+  aportar($meta, $usuario, $monto, $fecha): solo si meta activa + monto > 0.
+  avance($meta): total, porcentaje (tope 100), falta.
+  finalizar: solo si objetivoAlcanzado. Estado 'completada'.
+  abandonar: participaciones → 'abandonada', pendientes → 'rechazada'.
+    Meta → 'cancelada'. Historial se conserva.
+  tieneMetasCompartidasActivas($usuario): bloquea cambio a estandar.
+  Avisos de metas NO llevan clave_unica (idempotencia no aplica; cada evento
+  se puede repetir).
 
 CONTRATO C7 (detalle)
   cambiarTipo: estandar <-> familiar. Familiar -> estandar bloqueado con metas
@@ -1004,7 +1215,7 @@ CONTRATO C7 (detalle)
     foto de perfil del disco, borra en cascada, cierra sesión vaciando
     remember_token antes de Auth::logout.
   solicitarCambioCorreo / reenviarConfirmacionCorreo / confirmarCambioCorreo:
-    ver decisión #49.
+    ver decisión #49. Ver §18.
 
 CONTRATO C12 (tinte visual)
   Rol en <html data-account-type="...">. Elementos nuevos usan --accent-*.
@@ -1015,15 +1226,22 @@ CONTRATO C13 (transiciones)
 
 CONTRATO C14 (comando diario de alertas)
   php artisan alertas:gastos-fijos [--fecha=YYYY-MM-DD]. Idempotente por
-  (user_id, clave_unica). Clave = "{tipo}:{recurso_id}".
+  (user_id, clave_unica). Clave = "por_vencer:{pago_id}" o "vencido:{pago_id}".
+  Ignora admins y suspendidos.
+  Vencido cancela por_vencer pendiente del mismo pago y crea vencido.
 
 CONTRATO C15 (logo y favicon)
-  <x-logo :alto="N" />. Tokens --logo-* en theme.css bloque 10.
+  <x-logo :alto="N" :texto="true" />. Tokens --logo-* en theme.css bloque 10.
   window.CC.refreshIcons() para el favicon.
 
 CONTRATO C16 (correos de marca)
-  resources/views/emails/*. SVG inline por Content-ID. Tinte por rol en PHP.
-  Toda notificación nueva sigue este patrón.
+  resources/views/emails/*. SVG inline por embedData().
+  Tinte por rol en PHP.
+  Preheader, meta color-scheme, @media dark, fallback, nota de seguridad,
+  nota legal.
+  [NUEVO v3] AlertaSeguridad implements ShouldQueue (no bloquea el flujo).
+  ConfirmarCambioCorreo implementa Queueable pero NO ShouldQueue.
+  RestablecerContrasena extends ResetPassword de Laravel.
 
 CONTRATO C17 (iconografía por categoría)
   - Componente: <x-categoria-icono :categoria="$categoria" :size="20" />.
@@ -1032,8 +1250,8 @@ CONTRATO C17 (iconografía por categoría)
   - Prioridad: prop $icono → $categoria->icono (BD) → nombre mapeado
     (solo si es del sistema) → bloque.
   - Catálogo: Categoria::ICONOS (16 claves).
-  - Validación en StoreCategoriaRequest y StoreCategoriaSistemaRequest con
-    Rule::in(array_keys(Categoria::ICONOS)).
+  - Validación en StoreCategoriaRequest y StoreCategoriaSistemaRequest /
+    UpdateCategoriaSistemaRequest con Rule::in(array_keys(Categoria::ICONOS)).
 
 CONTRATO C18 (auditoría)
   - Servicio: App\Services\Auditoria::registrar(...).
@@ -1044,6 +1262,7 @@ CONTRATO C18 (auditoría)
   - En destroy: capturar $idBorrado y $rolBorrado antes de eliminar.
   - Llamar como $this->auditoria->registrar(...) (instancia inyectada),
     NUNCA Auditoria::registrar(...) (estático).
+  - Si no hay sesión (auth()->check() false), el servicio no hace nada.
 
 CONTRATO C19 (notificaciones de seguridad)
   - Notification: App\Notifications\AlertaSeguridad (implements ShouldQueue).
@@ -1051,7 +1270,7 @@ CONTRATO C19 (notificaciones de seguridad)
   - Eventos: password.changed, email.changed (al correo VIEJO),
     account.suspended, login.new_ip, login.blocked.
 
-CONTRATO C20 (onboarding tour) [NUEVO]
+CONTRATO C20 (onboarding tour)
   - Motor: public/js/onboarding.js + public/css/onboarding.css.
   - Componente: <x-onboarding-tour name="dashboard|admin-panel"
     :auto-start="true|false" />.
@@ -1065,7 +1284,7 @@ CONTRATO C20 (onboarding tour) [NUEVO]
   - Para añadir un tour: agregar entrada en `tours` + data-tour en la vista
     + <x-onboarding-tour name="..." /> al final.
 
-CONTRATO C21 (foto de perfil) [NUEVO]
+CONTRATO C21 (foto de perfil)
   - SIEMPRE <x-user-avatar :user :size />. Nunca <img> directo.
   - Formulario con enctype="multipart/form-data".
   - Validación en UpdatePerfilRequest.
@@ -1076,6 +1295,24 @@ CONTRATO C21 (foto de perfil) [NUEVO]
   - Accessor avatar_url devuelve URL relativa en dev; URL completa del
     bucket en prod S3/R2.
   - Ver §17 para el detalle de almacenamiento dev vs prod.
+  - Si el archivo ya no existe en el disk, avatar_url devuelve null.
+
+CONTRATO C22 (informes 50/30/20)  [NUEVO v3]
+  - GeneradorInforme::generar(int $ingreso, array $totalesPorBloque): array
+    Función pura, determinista, sin BD.
+    Devuelve bloques + total_gastado + saldo_disponible +
+    porcentaje_sin_clasificar + mensaje_general.
+  - InformeController::calcularMes(User $usuario, Carbon $fecha, GeneradorInforme):
+    public, reutilizado por GuardarInformesMensuales.
+    Suma gastos del mes (whereBetween fecha) + pagos_gasto_fijo pagados
+    del mes (whereBetween fecha_pago). Pendientes/vencidos NO cuentan.
+    Agrupa por bloque + categoría.
+    Gastos hormiga inline (frecuencia >= 5 && porcentaje >= 5).
+    Devuelve ['calculos', 'detalle', 'gastosHormiga'].
+  - Informe guardado NO se recalcula: @ver($id) lee $informe->detalles y
+    pasa los totales congelados por GeneradorInforme::generar.
+  - Exportaciones: CSV (streamDownload + BOM UTF-8) y Word (.doc via
+    Content-Type application/msword) para actual e histórico.
 
 ----------------------------------------------------------------------
 11. REGLAS DE NEGOCIO QUE NO SE PUEDEN ROMPER
@@ -1136,14 +1373,19 @@ Gastos fijos y alertas
   - Marcar pagado cancela la alerta pendiente.
   - Cada gasto fijo muestra su icono por categoría (--need/--want/--save).
 Simulador de créditos
-  - Tasa mensual vencida, sistema francés, redondeo final.
+  - Tasa mensual vencida, sistema francés, redondeo final (round()).
   - Semáforo: <20% saludable, 20-30% moderado, >30% riesgo.
   - Solo simulaciones, no créditos reales.
 Informes 50/30/20
   - Agrupa por bloque y categoría. Informe guardado no se recalcula.
+  - Gastos fijos PAGADOS del mes cuentan. Pendientes/vencidos no.
+  - Gastos hormiga: regla inline (frecuencia >= 5 && porcentaje >= 5).
+    Ver §18.4 sobre ServicioGastosHormiga (NO cableado).
 Dashboard
   - "Disponible del mes" = ingreso − gastos; no se guarda saldo.
   - Usa Gasto::delPeriodo (no whereYear/whereMonth inline).
+  - Refresca pagos del mes con ServicioGastosFijos.
+  - Tarjeta de metas solo si rol familiar.
 Administración
   - Admin nunca ve datos financieros individuales.
   - Categorías del sistema se desactivan.
@@ -1162,12 +1404,15 @@ Administración
   - Eliminar usuario, activar/desactivar categoría y eliminar categoría
     exigen re-auth (current_password).
 Categorías
-  - Nombre único entre las del usuario.
-  - Eliminar una con gastos: modal pide mover gastos.
+  - Nombre único entre las del usuario (case-insensitive con closure).
+  - Eliminar una con gastos: modal pide mover gastos (DB::transaction).
   - Categoria::activas() para filtrar al registrar gastos.
   - Botones usan btn-primary / btn-secondary / btn-danger.
   - Ícono: columna categorias.icono (nullable). Si es null, fallback por
     nombre (sistema) o bloque.
+  - [CORREGIDO v3] GastoController@store/update NO valida por dueño de
+    categoría (usa exists:categorias,id). GastoFijoController@store/update
+    SÍ valida con $this->authorize('usar', $categoria). Ver §18.3.
 Onboarding
   - El tour se lanza automáticamente al cargar /panel o /admin/panel, si el
     flag localStorage cc-tour:{name} no es "1".
@@ -1184,7 +1429,7 @@ Foto de perfil
   - Al eliminar la cuenta, la foto se borra del disco.
   - La imagen NUNCA se guarda en la BD; solo la ruta relativa.
   - Accessor avatar_url devuelve URL relativa en dev (evita CSP + host mismatch).
-  - Al eliminar: `Storage::disk('public')->delete()` + foto_perfil=null.
+  - Al eliminar: Storage::disk('public')->delete() + foto_perfil=null.
 
 TINTE POR ROL:
   - El tinte comunica el rol. Estándar → verde; Familiar → morado;
@@ -1194,53 +1439,143 @@ TINTE POR ROL:
   - Correos respetan el tinte del rol vía PHP.
   - Botones "guardar" NO son verdes.
 
-Mensajes EXACTOS conocidos: "Gasto guardado" · "Gasto actualizado" · "Gasto eliminado" ·
-"Meta creada" · "Meta abandonada" · "Meta cancelada" · "Meta finalizada" ·
-"Invitación enviada" · "Invitación aceptada" · "Invitación rechazada" ·
-"Aporte registrado" · "Gasto fijo pagado" · "Tipo de cuenta actualizado" ·
-"Rol actualizado" · "Cuenta suspendida" · "Cuenta activada" · "Usuario eliminado" ·
-"Categoría creada" · "Categoría actualizada" · "Categoría activada" ·
-"Categoría desactivada" · "Categoría eliminada" ·
-"Esta categoría ya se encuentra registrada" ·
-"Este correo ya se encuentra registrado" · "Usuario o contraseña incorrectos" ·
-"No hay gastos registrados en este periodo" · "No tienes simulaciones guardadas" ·
-"No hay datos suficientes para generar el informe" · "No tienes notificaciones pendientes".
+Mensajes EXACTOS conocidos (extraídos del código actual):
+  Registro / login:
+    · "Registro exitoso"
+    · "Usuario o contraseña incorrectos"
+    · "Tu cuenta está suspendida. Comunícate con el administrador."
+    · "Demasiados intentos fallidos. Intenta de nuevo en {segundos} segundos."
+    · "Si el correo está registrado, te enviamos un enlace para restablecer
+       tu contraseña."
+    · "Tu contraseña fue actualizada. Ya puedes iniciar sesión."
+    · "El enlace no es válido o ya venció. Solicita uno nuevo."
+    · "Tu sesión expiró por inactividad. Vuelve a iniciar sesión."
+  Gastos (real: con "correctamente."):
+    · "Gasto guardado correctamente."
+    · "Gasto actualizado correctamente."
+    · "Gasto eliminado correctamente."
+  Categorías (usuario):
+    · "Categoría creada correctamente."
+    · "Categoría actualizada correctamente."
+    · "Categoría eliminada correctamente."
+    · "Esta categoría ya se encuentra registrada"
+    · "Selecciona una categoría de destino válida."
+  Gastos fijos (real):
+    · "Gasto fijo creado correctamente."
+    · "Gasto fijo actualizado correctamente."
+    · "Gasto fijo eliminado correctamente."
+    · "Gasto fijo pagado"   (este NO lleva "correctamente")
+  Créditos:
+    · "Simulación guardada correctamente."
+    · "Simulación eliminada correctamente."
+  Informes:
+    · "El informe mensual se guardó correctamente."
+    · "El informe estará disponible cuando termine el mes seleccionado."
+    · "Registra tu ingreso mensual antes de guardar el informe."
+    · "Ya existe un informe guardado para este mes."
+  Notificaciones:
+    · "Todas las notificaciones se marcaron como leídas."
+    · "No tienes notificaciones pendientes."
+  Ajustes:
+    · "Tu perfil se actualizó correctamente."
+    · "Perfil actualizado. Revisa tu nuevo correo para confirmar el cambio."
+    · "Te enviamos un nuevo enlace de confirmación."
+    · "Tu correo se actualizó. Inicia sesión con el nuevo."
+    · "El enlace de confirmación no es válido o ya expiró."
+    · "El enlace de confirmación expiró. Solicita uno nuevo."
+    · "Ese correo ya fue confirmado por otra cuenta."
+    · "Otra cuenta está pendiente de confirmar este correo. Intenta con otro."
+    · "Ingresa tu contraseña actual para cambiar el correo o la contraseña."
+    · "La contraseña actual no es correcta."
+    · "Tu cuenta se eliminó correctamente."
+    · "Tipo de cuenta actualizado."
+    · "Selecciona un tipo de cuenta válido."
+    · "Debes finalizar o cancelar tus metas compartidas activas antes de
+       cambiar a una cuenta estándar."
+  Ajustes > foto:
+    · "La foto debe ser una imagen válida."
+    · "La foto debe ser JPG, PNG o WebP."
+    · "La foto no puede superar los 2 MB."
+  Metas:
+    · "Meta creada" · "Meta finalizada" · "Meta abandonada" · "Meta cancelada"
+    · "Invitación enviada" · "Invitación aceptada" · "Invitación rechazada"
+    · "Aporte registrado"
+    · "No existe un usuario registrado con ese correo"
+    · "Esa persona no es de tipo familiar y no puede participar en metas"
+    · "Esa persona ya participa en la meta"
+    · "La meta ya tiene el máximo de 2 participantes"
+    · "No puedes invitarte a ti mismo"
+    · "Esta meta es individual y no admite invitados"
+    · "Para aceptar esta invitación debes cambiar tu tipo de cuenta a
+       familiar en Ajustes."
+    · "Esta meta ya no está activa"
+    · "La meta no está activa y no recibe más aportes"
+    · "El monto debe ser mayor que cero"
+    · "Aún no se alcanza el monto objetivo de la meta"
+  Admin:
+    · "Rol actualizado"
+    · "Cuenta suspendida" · "Cuenta activada" · "Usuario eliminado"
+    · "No puedes eliminar tu propia cuenta desde aquí."
+    · "No puedes eliminar tu cuenta porque eres el único administrador
+       activo del sistema."
+    · "Debes finalizar o cancelar las metas compartidas activas antes de
+       bajar a estándar."
+    · "Categoría creada" · "Categoría actualizada"
+    · "Categoría desactivada" · "Categoría activada"
+    · "Categoría eliminada"
+    · "Esta categoría está en uso (N gastos y M gastos fijos). No se puede
+       eliminar; desactívala en su lugar."
+    · "No se pudo eliminar la categoría. Intenta de nuevo."
+    · "Ingresa tu contraseña para confirmar."
+    · "La contraseña no es correcta."
+    · "El administrador no tiene ingreso mensual."
+  Categorías del sistema / íconos:
+    · "Selecciona un bloque." · "Selecciona un bloque válido."
+    · "El icono seleccionado no es válido."
+  Página 404:
+    · "Página no encontrada"
+    · "La página que buscas no existe o fue movida..."
 
-Mensajes 2026-10-08: "Solo las cuentas familiares pueden crear metas compartidas..." ·
-"Para aceptar esta invitación debes cambiar tu tipo de cuenta a familiar en Ajustes." ·
-"Debes finalizar o cancelar tus metas compartidas activas antes de cambiar a una
-cuenta estándar.".
+Nota sobre mensajes 2026-10-08 (metas):
+  "Solo las cuentas familiares pueden crear metas compartidas. Cambia tu tipo
+   de cuenta en Ajustes."
+  "Para aceptar esta invitación debes cambiar tu tipo de cuenta a familiar en
+   Ajustes."
+  "Debes finalizar o cancelar tus metas compartidas activas antes de cambiar a
+   una cuenta estándar."
 
-Mensajes 2026-10-16 (J7): "No puedes eliminar tu cuenta porque eres el único
-administrador activo del sistema." · "Debes finalizar o cancelar las metas compartidas
-activas antes de bajar a estándar." · "No puedes eliminar tu propia cuenta desde aquí.".
+Nota sobre mensajes 2026-10-16 (J7):
+  "No puedes eliminar tu cuenta porque eres el único administrador activo del
+   sistema."
+  "Debes finalizar o cancelar las metas compartidas activas antes de bajar a
+   estándar."
+  "No puedes eliminar tu propia cuenta desde aquí."
 
-Mensajes 2026-10-17 (V4): "Tu perfil se actualizó correctamente." · "Perfil actualizado.
-Revisa tu nuevo correo para confirmar el cambio." · "Te enviamos un nuevo enlace de
-confirmación." · "Tu correo se actualizó. Inicia sesión con el nuevo." · "El enlace de
-confirmación no es válido o ya expiró." · "El enlace de confirmación expiró. Solicita uno
-nuevo." · "Ese correo ya fue confirmado por otra cuenta." · "Otra cuenta está pendiente
-de confirmar este correo. Intenta con otro." · "Ingresa tu contraseña actual para cambiar
-el correo o la contraseña." · "Tu cuenta se eliminó correctamente." · "La contraseña
-actual no es correcta.".
+Nota sobre mensajes 2026-10-17 (V4):
+  "Tu perfil se actualizó correctamente." · "Perfil actualizado. Revisa tu nuevo
+   correo para confirmar el cambio." · "Te enviamos un nuevo enlace de
+   confirmación." · "Tu correo se actualizó. Inicia sesión con el nuevo." ·
+   "El enlace de confirmación no es válido o ya expiró." · "El enlace de
+   confirmación expiró. Solicita uno nuevo." · "Ese correo ya fue confirmado
+   por otra cuenta." · "Otra cuenta está pendiente de confirmar este correo.
+   Intenta con otro." · "Ingresa tu contraseña actual para cambiar el correo
+   o la contraseña." · "Tu cuenta se eliminó correctamente." · "La contraseña
+   actual no es correcta."
 
-Mensajes 2026-10-19 (página 404): "Página no encontrada" · "La página que buscas no
-existe o fue movida...".
+Nota sobre mensajes 2026-10-19 (página 404):
+  "Página no encontrada" · "La página que buscas no existe o fue movida..."
 
-Mensajes 2026-10-20 (ícono / admin):
-  · "El icono seleccionado no es válido."
-  · "El administrador no tiene ingreso mensual."
+Nota sobre mensajes 2026-10-20 (ícono / admin):
+  "El icono seleccionado no es válido." · "El administrador no tiene ingreso
+   mensual."
 
-Mensajes 2026-10-22 (seguridad):
-  · "Ingresa tu contraseña para confirmar."
-  · "La contraseña no es correcta."
+Nota sobre mensajes 2026-10-22 (seguridad):
+  "Ingresa tu contraseña para confirmar." · "La contraseña no es correcta."
 
-Mensajes 2026-10-22 v2 (foto de perfil / eliminar categoría):
-  · "La foto debe ser una imagen válida."
-  · "La foto debe ser JPG, PNG o WebP."
-  · "La foto no puede superar los 2 MB."
-  · "Esta categoría está en uso (N gastos, M gastos fijos). No se puede
-     eliminar; desactívala en su lugar."
+Nota sobre mensajes 2026-10-22 v2 (foto / categoría):
+  "La foto debe ser una imagen válida." · "La foto debe ser JPG, PNG o WebP."
+  · "La foto no puede superar los 2 MB." · "Esta categoría está en uso (N
+  gastos, M gastos fijos). No se puede eliminar; desactívala en su lugar."
   · "No se pudo eliminar la categoría. Intenta de nuevo."
 
 ----------------------------------------------------------------------
@@ -1320,7 +1655,7 @@ Convenciones de logo, favicon y accesibilidad (2026-10-16):
 
 Convenciones de correo (2026-10-17):
   - resources/views/emails/*. Nunca MailMessage::line()/action().
-  - Logo inline SVG por Content-ID.
+  - Logo inline SVG por embedData().
   - Tinte por rol en PHP (no CSS).
   - Preheader, <meta color-scheme>, @media dark, fallback, nota de seguridad,
     nota legal.
@@ -1350,11 +1685,12 @@ Convenciones de sesión (2026-10-19):
   - Expira a los 15 min por inactividad vía middleware 'sesion.inactividad'.
   - Orden: ['sesion.inactividad', 'auth', 'cuenta.activa'].
   - Cambiar LIMITE_MINUTOS en el middleware, no SESSION_LIFETIME.
+  - logout (POST /cerrar-sesion) está SOLO con 'auth'.  [NUEVO v3]
 
 Convenciones del dashboard del administrador (2026-10-21):
   - /admin/panel es la pantalla principal del admin.
   - Solo COUNT y agregados.
-  - "Ir a mi panel" calcula el destino por rol.
+  - "Ir a mi panel" calcula el destino por rol (User::rutaPanel()).
   - /admin/estadisticas se mantiene como pantalla de agregados detallados.
   - PanelController separado de EstadisticaController.
 
@@ -1371,6 +1707,8 @@ Convenciones de seguridad J9 (2026-10-22):
     registro.guardar (5,1), password.email (5,1), password.update (5,1),
     ajustes.confirmar-correo.reenviar (1,1), admin.usuarios.rol (30,1),
     admin.categorias.destroy (30,1).
+  - Login: RateLimiter por (correo+IP), MAX_INTENTOS = 5. Notifica
+    login.blocked con Cache 1h por usuario.
   - Bugs conocidos corregidos:
     · CategoriasSistemaController@desactivar no debe tener abort_unless
       propio; la validación va en EliminarCategoriaSistemaRequest::authorize().
@@ -1403,7 +1741,7 @@ Convenciones de backups (2026-10-22):
   - Si se usa S3/R2, la copia de los archivos la gestiona el proveedor
     (versionado del bucket).
 
-Convenciones de onboarding (2026-10-22 v2):                          [NUEVO]
+Convenciones de onboarding (2026-10-22 v2):
   - Motor en public/js/onboarding.js (sin dependencias).
   - Componente <x-onboarding-tour name="..." :auto-start="true|false" />.
     auto-start=true solo en dashboard y admin/panel.
@@ -1421,7 +1759,7 @@ Convenciones de onboarding (2026-10-22 v2):                          [NUEVO]
   - Para forzar el tour en desarrollo: borrar cc-tour:{name} de
     localStorage o usar CCOnboarding.restart('dashboard') en consola.
 
-Convenciones de foto de perfil (2026-10-22 v2):                     [NUEVO]
+Convenciones de foto de perfil (2026-10-22 v2):
   - SIEMPRE usar <x-user-avatar :user :size />. Nunca <img> directo.
   - Formulario con enctype="multipart/form-data".
   - Validación en UpdatePerfilRequest (no en el controller).
@@ -1433,13 +1771,25 @@ Convenciones de foto de perfil (2026-10-22 v2):                     [NUEVO]
     evitar CSP + host mismatch. En prod S3 devuelve la URL del bucket.
   - NUNCA guardar la imagen en la BD (ver §17).
 
-Convenciones de almacenamiento (2026-10-22 v2):                     [NUEVO]
+Convenciones de almacenamiento (2026-10-22 v2):
   - Disk 'public' como abstracción: Storage::disk('public')->...
   - En desarrollo: symlink con `php artisan storage:link`. Windows:
     mklink /J si falla.
   - En producción: ver §17. S3/R2 con league/flysystem-aws-s3-v3,
     cambiando solo config/filesystems.php y .env.
   - Cada dev tiene sus propias fotos subidas (no se versionan).
+
+Convenciones de transacciones y locks (2026-11-12 v3):        [NUEVO v3]
+  - Usar DB::transaction cuando se modifican varias filas relacionadas.
+  - Usar lockForUpdate() cuando hay conteo + decisión (cupo de metas,
+    pago de gasto fijo).
+  - Capturar QueryException en deletes con FK restrict y devolver un
+    mensaje amable (no 500).
+
+Convenciones de exportaciones (2026-11-12 v3):                [NUEVO v3]
+  - CSV: response()->streamDownload + BOM UTF-8 (para Excel con tildes).
+  - Word: response()->view(..., 200, ['Content-Type' => 'application/msword']).
+  - Los históricos leen de $informe->detalles, NO recalculan.
 
 ----------------------------------------------------------------------
 13. ORDEN DE CONSTRUCCIÓN
@@ -1466,6 +1816,8 @@ Convenciones de almacenamiento (2026-10-22 v2):                     [NUEVO]
      de logs.
  10. Onboarding tour + admin elimina categorías + foto de perfil
      (HECHO 2026-10-22 v2).
+ 11. Automatización de informes mensuales + exportación CSV/Word + robots.txt
+     + sitemap.xml + Chart.js vía Vite (HECHO 2026-11-12).   [NUEVO v3]
 
   * Sesión 2026-10-14: modo oscuro + tinte + píldora topbar + transiciones.
   * Sesión 2026-10-16: J6 + J8a + J8 + J7 + pulido.
@@ -1482,13 +1834,16 @@ Convenciones de almacenamiento (2026-10-22 v2):                     [NUEVO]
     pendientes en J9.2.
   * Sesión 2026-10-22 v2: onboarding tour, admin elimina categorías,
     foto de perfil, sección de almacenamiento (dev symlink + prod S3/R2).
+  * Sesión 2026-11-12 v3: comandos mensuales de informes, exportaciones
+    CSV/Word, robots.txt, sitemap.xml, SitemapController, Chart.js.
+    Verificación del código y documentación de deuda técnica (§18).
+
 Siguiente de Juan: cerrar J9.2 (2FA, composer audit, logs).
 Siguiente de Nikol: cerrar N5 (landing + páginas legales) y validar cifras.
 Siguiente de Valeria: apoyar N5 en la revisión visual y arrancar la lista
 de J9.
 Al terminar todo (J9): no debe quedar ningún aviso "MAQUETA" en módulos reales.
-Comparar php artisan route:list --except-vendor con docs/backend/00-rutas.php
-(69 rutas reales + fallback = 70 mostradas).
+Comparar php artisan route:list --except-vendor: 76 rutas (75 + fallback).
 Pendientes: 2FA, composer audit, grep de logs, instalar backup-cuentas-claras.sh.
 
 ----------------------------------------------------------------------
@@ -1566,15 +1921,11 @@ DECISIONES DEL 2026-10-20: #58..#59
         /admin/categorias para las del sistema.
       · Prioridad al resolver: icono guardado > nombre mapeado (sistema) >
         bloque.
-      · Motivo: cada categoría tiene identidad visual propia sin romper el
-        fallback automático.
   #59 El administrador no tiene "Ingreso mensual":
       · Refuerza #20 (admin sin finanzas personales).
       · Vista: campo oculto con @if(!$esAdmin).
       · Request: Rule::prohibitedIf + borrar en prepareForValidation.
       · Controller: si es admin, no asigna 'ingreso_mensual'.
-      · Motivo: el admin no tiene finanzas personales ni dashboard; el
-        campo no aplica y no debe poder inyectarse por POST manipulado.
 
 DECISIONES DEL 2026-10-21: #60
   #60 Dashboard del administrador en /admin/panel:
@@ -1584,8 +1935,6 @@ DECISIONES DEL 2026-10-21: #60
       · "Ir a mi panel" calcula el destino por rol.
       · /admin/estadisticas se mantiene como pantalla de agregados
         detallados. No se borra ni se duplica.
-      · Motivo: el admin no tiene dashboard propio. Un dashboard unifica
-        KPIs, accesos rápidos y últimos movimientos.
 
 DECISIONES DEL 2026-10-22: #61..#67
   #61 Auditoría de acciones del admin (CERRADA 2026-10-22):
@@ -1602,7 +1951,6 @@ DECISIONES DEL 2026-10-22: #61..#67
         usuario.eliminar, categoria.crear, categoria.actualizar,
         categoria.desactivar, categoria.reactivar.
       · user_id nullable + nullOnDelete.
-      · Motivo: trazabilidad completa de acciones admin.
   #62 Notificaciones de seguridad (AlertaSeguridad):
       · Notification con ShouldQueue. 5 eventos: password.changed,
         email.changed, account.suspended, login.new_ip, login.blocked.
@@ -1611,16 +1959,12 @@ DECISIONES DEL 2026-10-22: #61..#67
       · login.blocked desde LoginRequest::notificarBloqueo() con Cache 1h.
       · Cada notify en try/catch con Log::warning.
       · Columnas users.last_login_ip, users.last_login_at.
-      · Motivo: el usuario se entera si alguien le cambió contraseña,
-        correo o intenta entrar.
   #63 Re-autenticación para acciones destructivas:
       · EliminarUsuarioRequest y EliminarCategoriaSistemaRequest con
         `current_password`.
       · El authorize() de EliminarCategoriaSistemaRequest valida categoría
         del sistema antes de la validación de password, para que el 403
         ocurra primero.
-      · Motivo: si el admin deja la sesión abierta, un tercero no puede
-        ejecutar acciones destructivas sin conocer la contraseña.
   #64 CSP (Content-Security-Policy):
       · Modo permisivo (con 'unsafe-inline' en script-src y style-src).
       · Google Fonts y Material Symbols autorizados explícitamente.
@@ -1633,7 +1977,6 @@ DECISIONES DEL 2026-10-22: #61..#67
       · LoginRequest::notificarBloqueo() envía login.blocked al usuario.
       · Solo si el correo existe en BD.
       · Cache 1h por usuario.
-      · Motivo: avisar al dueño si alguien intenta entrar por fuerza bruta.
   #67 2FA (TOTP) para usuarios y admin: [PENDIENTE J9.2]
       · Paquetes: pragmarx/google2fa + bacon/bacon-qr-code.
       · Columnas: users.two_factor_secret (text, nullable) y
@@ -1643,7 +1986,6 @@ DECISIONES DEL 2026-10-22: #61..#67
         login.2fa, login.2fa.verify.
       · LoginController: si hasTwoFactorEnabled, desloguear y pedir código.
       · Desactivar requiere current_password.
-      · Estado: diseño completo, no implementado por bloqueo de Composer.
 
 DECISIONES DEL 2026-10-22 v2: #68..#70
   #68 Onboarding tour sin dependencias:
@@ -1657,7 +1999,6 @@ DECISIONES DEL 2026-10-22 v2: #68..#70
       · Overlay con box-shadow 9999px. HTML del tour appendeado a <html>.
       · Botón "Ver tour de nuevo" en Ajustes/Perfil.
       · Evento cc-tour:finished revela welcome card del dashboard.
-      · Motivo: onboarding sin costo de mantenimiento, reusable, portable.
   #69 Admin puede eliminar categorías del sistema (condicionado):
       · Nueva ruta DELETE /admin/categorias/{categoria}.
       · SOLO se eliminan si gastos_count + gastos_fijos_count = 0.
@@ -1684,6 +2025,27 @@ DECISIONES DEL 2026-10-22 v2: #68..#70
         externos en desarrollo, con migración limpia a S3/R2 en producción
         sin cambios de código (ver §17).
 
+DECISIONES DEL 2026-11-12 v3:                                 [NUEVO v3]
+  #71 Conteo real de rutas = 76 (75 nombradas + fallback). Se documentan
+      SitemapController, robots.txt y sitemap.xml. El doc v2 (70) estaba
+      desactualizado.
+  #72 Comandos mensuales reales:
+      · informes:guardar-mensuales (GuardarInformesMensuales) usa DI de
+        InformeController::calcularMes como orquestador. Deuda: mover la
+        lógica del controller a un servicio.
+      · informes:notificar-disponibles usa clave_unica
+        "informe_disponible:{YYYY-MM}".
+  #73 Gastos hormiga: se documenta la contradicción entre ServicioGastosHormiga
+      (monto <= 20000 && frecuencia >= 3, NO cableado) y la implementación
+      inline (frecuencia >= 5 && porcentaje >= 5, ACTIVA). Se deja como
+      deuda consolidar en una sola implementación. Ver §18.
+  #74 Notificaciones por email:
+      · ConfirmarCambioCorreo implementa Queueable (NO ShouldQueue).
+      · AlertaSeguridad implementa ShouldQueue.
+      · RestablecerContrasena extiende ResetPassword de Laravel.
+      · Todas las plantillas usan embedData() con SVG inline como adjunto
+        para que el logo se vea aunque el cliente bloquee imágenes externas.
+
 Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
 
 ----------------------------------------------------------------------
@@ -1696,7 +2058,7 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
      el cambio a Juan. NUNCA edites una migración ya unida.
   5. Toda consulta parte de auth()->user(); autoriza con Policy antes de leer
      o modificar. Listados: Modelo::delUsuario(auth()->id()).
-  6. Usa los mensajes exactos; texto en español; dinero en enteros.
+  6. Usa los mensajes exactos (§11); texto en español; dinero en enteros.
   7. Escribe pruebas con el código.
   8. No uses GET para modificar datos; todo formulario lleva @csrf.
   9. Si algo contradice un comentario de cabecera, avisa y corrige en la PR.
@@ -1727,14 +2089,14 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
  28. Los botones "guardar" NO van verdes.
  29. La página 404 depende de Route::fallback() en web.php.
  30. La sesión expira a los 15 min vía middleware 'sesion.inactividad'. No
-     dupliques con otros middlewares.
+     dupliques con otros middlewares. logout NO lleva sesion.inactividad.
  31. El admin NO tiene ingreso mensual.
  32. El catálogo de íconos está en Categoria::ICONOS.
  33. Los selectores de íconos usan radio buttons estilizados con
      .categoria-icono-selector / .categoria-icono-label.
  34. Categoria::iconoResuelto() prioriza: ícono guardado > nombre mapeado
      (solo sistema) > bloque.
- 35. "Ir a mi panel" NUNCA va con route('panel') fijo.
+ 35. "Ir a mi panel" NUNCA va con route('panel') fijo. Usar User::rutaPanel().
  36. /admin/panel es solo COUNT y agregados.
  37. Auditoría OBLIGATORIA en cada mutación del admin vía
      $this->auditoria->registrar(...) (instancia, no estático).
@@ -1783,6 +2145,21 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
      tooltip si la categoría tiene referencias. El backend también lo
      bloquea (defensa en profundidad).
  54. No añadir autoreset de localStorage en código de producción.
+ 55. Usar DB::transaction cuando varias filas dependan entre sí.          [NUEVO v3]
+ 56. Usar lockForUpdate() cuando hay conteo + decisión (cupo metas, pago). [NUEVO v3]
+ 57. En deletes con FK restrict: try/catch QueryException + mensaje amable. [NUEVO v3]
+ 58. Informes: NO recalcular un informe guardado. Leer de detalles.       [NUEVO v3]
+ 59. Los gastos fijos PAGADOS cuentan en el informe; pendientes/vencidos no. [NUEVO v3]
+ 60. Gastos hormiga: la regla vigente es la de InformeController
+     (frecuencia >= 5 && porcentaje >= 5). El ServicioGastosHormiga NO está
+     cableado. Ver §18.4.                                             [NUEVO v3]
+ 61. Rutas nuevas: /robots.txt, /sitemap.xml y las 4 exportaciones de
+     informes. No las elimines.                                       [NUEVO v3]
+ 62. Antes de la sustentación / producción: borrar el hack
+     `if (!auth()->check()) { auth()->loginUsingId(1); }` de
+     GastoController@index y @create. Ver §18.1.                      [NUEVO v3]
+ 63. Cuidado con ServicioGastosHormiga: existe pero no está cableado. No
+     lo "arregles" sin consultar antes.                                [NUEVO v3]
 
 ----------------------------------------------------------------------
 16. DOCUMENTOS RELACIONADOS
@@ -1812,6 +2189,9 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
   Onboarding_Tour_2026-10-22.txt ................................... (crear)
   Admin_Elimina_Categorias_2026-10-22.txt ........................... (crear)
   Foto_Perfil_y_Almacenamiento_2026-10-22.txt ....................... (crear)
+  Informes_Mensuales_Automaticos_2026-11-12.txt ..................... (crear)  [NUEVO v3]
+  SEO_Robots_Sitemap_2026-11-12.txt ................................. (crear)  [NUEVO v3]
+  Deuda_Tecnica_v3_2026-11-12.txt ................................... (crear)  [NUEVO v3]
   diagrama_tablas.png / .svg
   docs/backend/*.php
   docs/juan/deploy.sh
@@ -1823,6 +2203,7 @@ Cada decisión se anota en DECISIONES.md con fecha, qué y por qué.
 ----------------------------------------------------------------------
 17. ALMACENAMIENTO DE IMÁGENES: DESARROLLO Y PRODUCCIÓN
 ----------------------------------------------------------------------
+(Sección sin cambios respecto a v2, se conserva completa.)
 
 Contexto
 -------
@@ -2062,6 +2443,158 @@ Checklist al migrar a producción con S3/R2:
       cuenta.
   [ ] Backup del bucket: configurar versionado o lifecycle.
   [ ] Documentar en docs/juan/backups.md.
+
+----------------------------------------------------------------------
+18. DEUDA TÉCNICA Y DISCREPANCIAS CONOCIDAS  [NUEVO v3]
+----------------------------------------------------------------------
+Esta sección es OBLIGATORIA para cualquiera que toque el código. Documenta
+dónde el código real NO coincide con lo que el doc anterior asumía, o
+dónde hay decisiones técnicas pendientes.
+
+18.1. 🔴 GastoController tiene auth()->loginUsingId(1) en index() y create()
+      Archivo: app/Http/Controllers/GastoController.php
+      Línea:
+        if (!auth()->check()) { auth()->loginUsingId(1); }
+      Impacto: si alguien llega sin sesión (el middleware 'auth' del grupo
+      privado lo impide en producción, así que es inalcanzable ahí), se
+      autentica como user 1. Es un atajo de desarrollo.
+      Acción: BORRARLO antes de producción / sustentación.
+
+18.2. 🔴 GastoController y CategoriaController NO usan Policies
+      GastoController@edit/@update/@destroy compara user_id !== auth()->id()
+      manualmente. CategoriaController@update/@destroy igual.
+      Funciona (403), pero el estándar del proyecto es $this->authorize().
+      No es bug; es inconsistencia.
+
+18.3. 🔴 GastoController@store/update no filtra categoria_id por dueño
+      Valida 'categoria_id' => 'required|exists:categorias,id' sin filtrar a
+      categorías propias o del sistema.
+      Impacto: alguien puede guardar un gasto con categoría ajena (si
+      adivina el id). El nombre de la categoría se mostraría en el listado.
+      Acción: llamar $this->authorize('usar', $categoria) o filtrar el
+      exists con un closure. GastoFijoController@store/update SÍ lo hace.
+
+18.4. 🔴 Dos implementaciones de "gastos hormiga" con reglas distintas
+      · ServicioGastosHormiga (app/Services/):
+          MONTO_MAXIMO_COMPRA = 20000, FRECUENCIA_MINIMA = 3.
+          Regla: compras <= $20.000 repetidas >= 3 veces en el mes.
+          Devuelve: total, conceptos, porcentaje, detalle, criterios.
+          ESTADO: NO está cableado en ningún archivo verificado.
+          Es CÓDIGO MUERTO.
+      · InformeController::calcularMes (inline, la que SÍ corre):
+          Agrupa por descripción normalizada.
+          Filtra: frecuencia >= 5 && porcentaje >= 5% del total gastado.
+          Devuelve: total, cantidad, conceptos, porcentaje, promedio, detalle.
+          ESTADO: es la que se muestra en app/informes/actual.
+      Consecuencia: los mismos datos pueden dar resultados distintos según
+      qué implementación se use. La que corre es la inline.
+      Acción: o se borra ServicioGastosHormiga, o se migra el informe a
+      usarlo. La regla vigente es la inline.
+
+18.5. 🔴 User::registrarLogin($ip, $userAgent) ignora el $userAgent
+      Solo persiste last_login_ip y last_login_at con forceFill.
+      El UA va a la notificación de AlertaSeguridad('login.new_ip') y a la
+      auditoría (Auditoria::registrar guarda UA truncado a 500), no a users.
+      Si preguntan "¿dónde guardan el user agent del login?", la respuesta
+      real es: en la notificación / auditoría, no en users.
+      Acción: si molesta el parámetro sin usar, quitarlo o documentar.
+
+18.6. 🟡 Meta::esCompartida() devuelve true si el atributo no está cargado
+      return (bool) ($this->getAttribute('compartida') ?? true);
+      Riesgo: si alguna consulta no selecciona 'compartida', el modelo
+      asume que es compartida.
+      En la práctica, si el default de la migración es true, coincide.
+      Si es false, es bug.
+
+18.7. 🟡 AjustesController@actualizarPerfil usa app(ServicioCuentas::class)
+      inline pese a tener $this->cuentas inyectado en el constructor.
+      También usa \Hash::make() (con use Illuminate\Support\Facades\Hash;).
+      Funciona, es inconsistente. Refactor opcional.
+
+18.8. 🟡 StoreAporteMetaRequest y StoreMetaRequest normalizan montos con
+      preg_replace('/[\s$.,]/', '', ...) que BORRA comas y puntos.
+      Efecto: "$ 1.500,50" → "150050" ($150.050, 100x mayor).
+      Los montos deben ser enteros, pero si el usuario escribe decimales con
+      coma, el resultado es erróneo.
+      Acción: revisar el input JS; no aceptar decimales o quitar solo el
+      punto si el formato es de miles.
+
+18.9. 🟡 CSP con 'unsafe-inline' en script-src y style-src
+      Deuda consciente para no romper scripts inline del tema ni style="".
+      Plan: migrar a nonces (J9.2).
+
+18.10. 🟡 InformeController::calcularMes es public
+       Lo reutiliza GuardarInformesMensuales. Funciona, pero un profesor
+       estricto puede sugerir un servicio. Refactor opcional.
+
+18.11. 🟡 Código muerto con "MAQUETA"
+       En routes/modulos/creditos.php y routes/modulos/gastos.php:
+         $pendiente = fn () => back()->with('exito', 'MAQUETA: esta acción
+                       aún no está implementada');
+       Nunca se usa. Borrar antes de sustentación.
+
+18.12. 🟡 Mensajes: el código agrega "correctamente." en varios módulos
+       donde el doc v2 decía solo "Gasto guardado", etc.
+       La §11 de este documento lista los reales.
+
+18.13. 🟡 Rutas reales: 76, doc v2 decía 70.
+       Las nuevas (relativas a v2): robots, sitemap, 4 exportaciones de
+       informes.
+
+18.14. 🟡 ServicioGastosHormiga vive en app/Services/ pero no se importa en
+       ningún archivo verificado. Si lo borran y algo lo usaba, fallará en
+       tiempo de ejecución (no de compilación).
+
+18.15. 🟡 GuardarInformesMensuales llama a InformeController::calcularMes.
+       Acopla el comando al controlador. Funciona. Ideal: mover a un
+       servicio.
+
+18.16. 🟢 Pendientes J9.2 (no bloquean sustentación, sí producción):
+       · 2FA no implementado.
+       · composer audit no se pudo correr.
+       · grep "Log::" no se ha hecho.
+       · backup-cuentas-claras.sh no está instalado en servidor.
+
+----------------------------------------------------------------------
+19. CÓMO CORRER EL PROYECTO  [NUEVO v3]
+----------------------------------------------------------------------
+Primera vez en local:
+  1. cp .env.example .env
+  2. php artisan key:generate
+  3. Verificar en .env:
+       APP_ENV=local
+       APP_DEBUG=true
+       APP_LOCALE=es
+       DB_CONNECTION=sqlite
+       SESSION_DRIVER=database
+       SESSION_LIFETIME=480
+       CACHE_STORE=database
+       QUEUE_CONNECTION=database
+       MAIL_MAILER=log
+       AUTH_PASSWORD_RESET_EXPIRE=30
+  4. Crear database/database.sqlite vacío.
+  5. php artisan migrate:fresh --seed
+  6. php artisan storage:link
+  7. npm install && npm install chart.js && npm run build
+  8. php artisan serve
+
+Para pruebas:
+  php artisan test
+  (usa SQLite en memoria; no requiere el archivo real)
+
+Para procesar colas (desarrollo):
+  php artisan queue:work
+  (necesario para AlertaSeguridad, que es ShouldQueue)
+
+Para probar comandos con fecha simulada:
+  php artisan alertas:gastos-fijos --fecha=2026-11-27
+  php artisan informes:guardar-mensuales --fecha=2026-11-01
+  php artisan informes:notificar-disponibles --fecha=2026-11-01
+
+Cuentas de prueba locales (después de migrate:fresh --seed):
+  estandar@test.com / password
+  familiar@test.com / password
+  admin@test.com    / password
 
 ======================================================================
 FIN DEL DOCUMENTO
